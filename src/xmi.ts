@@ -14,9 +14,9 @@ Ecore.XMI = {
         if (!Ecore.sax) throw new Error('Sax is missing.');
 
         var parser = Ecore.sax.parser(true),
-            resourceSet = model.get('resourceSet') || Ecore.ResourceSet.create(),
-            namespaces = [],
-            current;
+          resourceSet = model.get('resourceSet') || Ecore.ResourceSet.create(),
+          namespaces = [],
+          current;
 
         function findNamespaces(attributes) {
             if (!attributes) return;
@@ -48,31 +48,31 @@ Ecore.XMI = {
         }
 
         function getClassURIFromPrefix(value) {
-             var split = value.split(':'),
-                 prefix = split[0],
-                 className = split[1];
+            var split = value.split(':'),
+              prefix = split[0],
+              className = split[1];
 
-             return getNamespace(prefix) + '#//' + className;
+            return getNamespace(prefix) + '#//' + className;
         }
 
         function getClassURIFromFeatureType(node) {
             var eClass;
 
             if (node.parent && node.parent.eObject) {
-                 var parent = currentNode.parent.eObject,
-                     name = node.name,
-                     eFeature = parent.eClass.getEStructuralFeature(name),
-                     eType;
+                var parent = currentNode.parent.eObject,
+                  name = node.name,
+                  eFeature = parent.eClass.getEStructuralFeature(name),
+                  eType;
 
-                 if (eFeature && eFeature.get) {
-                      eType = eFeature.get('eType');
-                      var aType = node.attributes['xsi:type'];
-                      if (aType) {
-                          eClass = resourceSet.getEObject(getClassURIFromPrefix(aType));
-                      } else {
-                          eClass = eType;
-                      }
-                 }
+                if (eFeature && eFeature.get) {
+                    eType = eFeature.get('eType');
+                    var aType = node.attributes['xsi:type'];
+                    if (aType) {
+                        eClass = resourceSet.getEObject(getClassURIFromPrefix(aType));
+                    } else {
+                        eClass = eType;
+                    }
+                }
             }
 
             return eClass;
@@ -87,13 +87,13 @@ Ecore.XMI = {
         }
 
         var currentNode, rootObject, toResolve = [];
-        
+
         parser.ontext = function(text) {
-        	if(currentNode && currentNode.waitingForAttributeText) {
-        		// The attribute was provided as an XMI element, 
-        		// so store it to the parent node as an attribute.
-        		currentNode.parent.eObject.set(currentNode.name, text);
-        	}
+            if(currentNode && currentNode.waitingForAttributeText) {
+                // The attribute was provided as an XMI element,
+                // so store it to the parent node as an attribute.
+                currentNode.parent.eObject.set(currentNode.name, text);
+            }
         };
 
         parser.onopentag = function(node) {
@@ -108,32 +108,32 @@ Ecore.XMI = {
 
             eClass = findEClass(node);
             if (eClass) {
-            	var nodeIsAnAttribute = currentNode.parent && currentNode.parent.eObject && currentNode.parent.eObject.eClass.getEStructuralFeature(node.name).isTypeOf('EAttribute');
-            	if (nodeIsAnAttribute) {
-            		// Set flag for parser.ontext to process and store attribute text
-            		node.waitingForAttributeText = true;
-            	} else {
-            		eObject = currentNode.eObject = Ecore.create(eClass);
+                var nodeIsAnAttribute = currentNode.parent && currentNode.parent.eObject && currentNode.parent.eObject.eClass.getEStructuralFeature(node.name).isTypeOf('EAttribute');
+                if (nodeIsAnAttribute) {
+                    // Set flag for parser.ontext to process and store attribute text
+                    node.waitingForAttributeText = true;
+                } else {
+                    eObject = currentNode.eObject = Ecore.create(eClass);
 
                     if (!rootObject) {
                         rootObject = eObject;
                     }
-                    
+
                     _.each(node.attributes, function(num, key) {
-                    	if (eObject.has(key)) {
-                    		eFeature = eObject.eClass.getEStructuralFeature(key);
-                    		if (eFeature.isTypeOf('EAttribute')) {
-                    			eObject.set(key, num);
-                    		} else {
-                    			toResolve.push({ parent: eObject, feature: eFeature, value: num });
-                    		}
-                    	}
-                    	// Special processing for xmi:id's
-                    	if (key === 'xmi:id') {
+                        if (eObject.has(key)) {
+                            eFeature = eObject.eClass.getEStructuralFeature(key);
+                            if (eFeature.isTypeOf('EAttribute')) {
+                                eObject.set(key, num);
+                            } else {
+                                toResolve.push({ parent: eObject, feature: eFeature, value: num });
+                            }
+                        }
+                        // Special processing for xmi:id's
+                        if (key === 'xmi:id') {
                             eObject._id = num;
-                    	}
+                        }
                     });
-                    
+
                     if (node.parent) {
                         parentObject = node.parent.eObject;
                         if (parentObject && parentObject.has(node.name)) {
@@ -153,17 +153,17 @@ Ecore.XMI = {
                                 }
                             }
                         } else {
-                        	// There are multiple rootObjects.
-                        	if(rootObject && (rootObject !== eObject)) {
-                        		// There is already a rootObject that has been processed.
-                        		model.add(rootObject);
-                        		rootObject = eObject;
-                        	}
+                            // There are multiple rootObjects.
+                            if(rootObject && (rootObject !== eObject)) {
+                                // There is already a rootObject that has been processed.
+                                model.add(rootObject);
+                                rootObject = eObject;
+                            }
                         }
                     }
-            	}
+                }
             } else if (eClass === undefined) {
-            	throw new Error( node.name + " has undefined/invalid eClass.");
+                throw new Error( node.name + " has undefined/invalid eClass.");
             } //again, eClass may be null
         };
 
@@ -185,13 +185,13 @@ Ecore.XMI = {
 
             function setReference(parent, feature, value) {
                 var refs = value.split(/\s/),
-                    isMany = feature.get('upperBound') !== 1,
-                    resolved;
-                
+                  isMany = feature.get('upperBound') !== 1,
+                  resolved;
+
                 if (refs[0] === 'ecore:EDataType') {
-                	// Throw out first part as it will resolve to a null reference.
+                    // Throw out first part as it will resolve to a null reference.
                     // The second element contains the actual eType
-                	refs.shift();
+                    refs.shift();
                 }
 
                 _.each(refs, function(ref) {
@@ -202,7 +202,7 @@ Ecore.XMI = {
                     } else {
                         resolved = resourceSet.getEObject(ref);
                         if (resolved === null) {
-                        	console.log('Warning: ' + ref + ' is an unresolved reference');
+                            console.log('Warning: ' + ref + ' is an unresolved reference');
                         }
                     }
                     if (resolved) {
@@ -212,16 +212,16 @@ Ecore.XMI = {
                             parent.set(feature.get('name'), resolved);
                         }
                     } else if (resolved === undefined) {
-                    	//Note: resolved is null in certain valid situations
-                    	throw new Error("Undefined reference: " + ref);
+                        //Note: resolved is null in certain valid situations
+                        throw new Error("Undefined reference: " + ref);
                     }
                 });
             }
 
             _.each(toResolve, function(resolving) {
                 var parent = resolving.parent,
-                    feature = resolving.feature,
-                    value = resolving.value;
+                  feature = resolving.feature,
+                  value = resolving.value;
 
                 setReference(parent, feature, value);
             });
@@ -234,22 +234,22 @@ Ecore.XMI = {
 
     to: function(model, indent) {
         var docRoot = '',
-        	contents = model.get('contents').array(),
-            nsPrefix,
-            nsURI,
-            contentsFeature = Ecore.Resource.getEStructuralFeature('contents');
-        
+          contents = model.get('contents').array(),
+          nsPrefix,
+          nsURI,
+          contentsFeature = Ecore.Resource.getEStructuralFeature('contents');
+
         function escapeXML(text) {
-        	  var map = {
-        	    '&': '&amp;',
-        	    '<': '&lt;',
-        	    '>': '&gt;',
-        	    '"': '&quot;',
-        	    "'": '&#039;'
-        	  };
-        	  
-        	  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-        	}
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
 
         function processElement(root, isSingleInstance) {
             docRoot += '<';
@@ -260,35 +260,35 @@ Ecore.XMI = {
             } else {
                 element = nsPrefix + ':' + root.eClass.get('name');
             }
-            
+
             docRoot += element;
-            
+
             if (root.eContainer.isKindOf('Resource')) {
                 // This is an instance at the top level of the resource
-            	if (isSingleInstance) {
-            	    // This is the only instance in the resource
-            		docRoot += ' xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"';
+                if (isSingleInstance) {
+                    // This is the only instance in the resource
+                    docRoot += ' xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"';
                     docRoot += ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"';
                     docRoot += ' xmlns:' + nsPrefix + '="' + nsURI + '"';
-            	}
+                }
             } else {
                 // This is a nested element, need to check if subtype is needed
                 if (root.eContainingFeature.get('eType') !== root.eClass) {
-                  	docRoot += ' xsi:type="';
-                  	docRoot += nsPrefix + ':' + root.eClass.get('name') + '"';                  
+                    docRoot += ' xsi:type="';
+                    docRoot += nsPrefix + ':' + root.eClass.get('name') + '"';
                 }
             }
 
             var features = root.eClass.get('eAllStructuralFeatures'),
-                attributes = _.filter(features, function(feature) {
-                    return !feature.get('derived') && feature.isTypeOf('EAttribute') &&
-                        root.isSet(feature.get('name'));
-                }),
-                references = _.filter(features, function(feature) {
-                    return !feature.get('derived') && feature.isTypeOf('EReference') &&
-                        !feature.get('containment') && root.isSet(feature.get('name'));
-                });
-            
+              attributes = _.filter(features, function(feature) {
+                  return !feature.get('derived') && feature.isTypeOf('EAttribute') &&
+                    root.isSet(feature.get('name'));
+              }),
+              references = _.filter(features, function(feature) {
+                  return !feature.get('derived') && feature.isTypeOf('EReference') &&
+                    !feature.get('containment') && root.isSet(feature.get('name'));
+              });
+
             // Write the xmi:id if necessary
             if (root._id) {
                 docRoot += ' xmi:id="' + root._id + '"';
@@ -296,16 +296,16 @@ Ecore.XMI = {
 
             _.each(attributes, function(feature) {
                 var featureName = feature.get('name'),
-                    value = root.get(featureName);
+                  value = root.get(featureName);
 
                 if (value !== undefined && value !== 'false') {
-                	docRoot += ' '  + featureName + '="';
-                	if (typeof(value) === 'string') {
-                		docRoot += escapeXML(value);
-                	}
-                	else {
-                		docRoot += value;
-                	}
+                    docRoot += ' '  + featureName + '="';
+                    if (typeof(value) === 'string') {
+                        docRoot += escapeXML(value);
+                    }
+                    else {
+                        docRoot += value;
+                    }
                     docRoot += '"';
                 }
             });
@@ -333,9 +333,9 @@ Ecore.XMI = {
 
                 _.each(externals, function(ext) {
                     var feature = ext.feature,
-                        refs = ext.refs,
-                        isAbstract = feature.get('eType').get('abstract'),
-                        prefix;
+                      refs = ext.refs,
+                      isAbstract = feature.get('eType').get('abstract'),
+                      prefix;
 
                     _.each(refs, function(ref) {
                         docRoot += '<' + feature.get('name');
@@ -349,8 +349,8 @@ Ecore.XMI = {
 
                 var containments = _.filter(features, function(feature) {
                     return  feature.isTypeOf('EReference') &&
-                        feature.get('containment') &&
-                        root.isSet(feature.get('name'));
+                      feature.get('containment') &&
+                      root.isSet(feature.get('name'));
                 });
 
                 _.each(containments, function(feature) {
@@ -371,52 +371,52 @@ Ecore.XMI = {
         // Process the instance(s) in the resource
         if(contents.length === 1) {
             // There is only one instance in this resource
-        	nsPrefix = contents[0].eClass.eContainer.get('nsPrefix');
+            nsPrefix = contents[0].eClass.eContainer.get('nsPrefix');
             nsURI = contents[0].eClass.eContainer.get('nsURI');
-        	processElement(contents[0], true);
-        	
+            processElement(contents[0], true);
+
         } else {
             // There are multiple instances in this resource
-        	var namespaces = {}; // Used to store unique namespaces
-        	
+            var namespaces = {}; // Used to store unique namespaces
+
             for (var i in contents) {
-        		nsPrefix = contents[i].eClass.eContainer.get('nsPrefix');
+                nsPrefix = contents[i].eClass.eContainer.get('nsPrefix');
                 nsURI = contents[i].eClass.eContainer.get('nsURI');
-                namespaces[nsPrefix] = nsURI;       
-            	processElement(contents[i]);
+                namespaces[nsPrefix] = nsURI;
+                processElement(contents[i]);
             }
-            
+
             // Construct the namespace portion of the XMI element 
-        	var nsString = '';
-        	for (var nsKey in namespaces) {
-        		nsString += ' xmlns:' + nsKey + '="' + namespaces[nsKey] + '"';
-        	}
-        	
-        	// Wrap the processed elements with the XMI element
-        	docRoot = '<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' + nsString + '>' + docRoot + '</xmi:XMI>';
-        	
+            var nsString = '';
+            for (var nsKey in namespaces) {
+                nsString += ' xmlns:' + nsKey + '="' + namespaces[nsKey] + '"';
+            }
+
+            // Wrap the processed elements with the XMI element
+            docRoot = '<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' + nsString + '>' + docRoot + '</xmi:XMI>';
+
         }
-        
+
         // Format the final result
         docRoot = indent ? formatXml(docRoot) : docRoot;
         docRoot = '<?xml version="1.0" encoding="UTF-8"?>\n' + docRoot;
-        
+
         return docRoot;
     }
 };
 
 function formatXml(xml) {
     var reg = /(>)(<)(\/*)/g,
-        wsexp = / *([^ ].*[^ ]) *\n/g,
-        contexp = /(<.+>)(.+\n)/g;
+      wsexp = / *([^ ].*[^ ]) *\n/g,
+      contexp = /(<.+>)(.+\n)/g;
 
     xml = xml.replace(reg, '$1\n$2$3').replace(wsexp, '$1\n').replace(contexp, '$1\n$2');
-    
+
     var pad = 0,
-        formatted = '',
-        lines = xml.split('\n'),
-        indent = 0,
-        lastType = 'other';
+      formatted = '',
+      lines = xml.split('\n'),
+      indent = 0,
+      lastType = 'other';
 
     // 4 types of tags - single, closing, opening, other (text, doctype, comment) - 4*4 = 16 transitions
     var transitions = {

@@ -36,7 +36,7 @@ var Ecore = {
 
     create: function(eClass, attributes) {
         var attrs,
-            eObject;
+          eObject;
 
         if (!attributes) {
             if (eClass instanceof EObject) {
@@ -185,11 +185,11 @@ function initValue(eObject, eFeature) {
     if (!eObject || !eFeature) return;
 
     var featureName = eFeature.get('name'),
-        defaultValue = eFeature.values.defaultValue,
-        upperBound = eFeature.get('upperBound'),
-        isDerived = eFeature.values.derived === true,
-        isContainment = eFeature.values.containment === true,
-        value = eObject.values[featureName];
+      defaultValue = eFeature.values.defaultValue,
+      upperBound = eFeature.get('upperBound'),
+      isDerived = eFeature.values.derived === true,
+      isContainment = eFeature.values.containment === true,
+      value = eObject.values[featureName];
 
     var setDefaultUniqueValue = function() {
         var _default;
@@ -256,7 +256,7 @@ function setValues(eObject, attributes) {
 
     _.each(attributes, function(value, key) {
         var eFeature = getEStructuralFeature(this.eClass, key),
-            values = [];
+          values = [];
 
         if (eFeature && value !== undefined) {
             if (eFeature.get('upperBound') === 1) {
@@ -371,7 +371,7 @@ Ecore.EObjectPrototype = {
                 }
 
                 var feature = getEStructuralFeature(this.eClass, attr),
-                    isContainment = feature.get('containment');
+                  isContainment = feature.get('containment');
 
                 var settingContainmentAttribute = (attr === 'containment') && (typeof(val) === 'string') && (this.eClass.values.name === 'EReference');
                 if (settingContainmentAttribute) {
@@ -382,8 +382,8 @@ Ecore.EObjectPrototype = {
                 this.values[attr] = val;
 
                 if (isContainment) {
-                  val.eContainingFeature = feature;
-                  val.eContainer = this;
+                    val.eContainingFeature = feature;
+                    val.eContainer = this;
                 }
                 eve = 'change:' + attr;
                 this.trigger('change ' + eve, attr);
@@ -419,20 +419,20 @@ Ecore.EObjectPrototype = {
 
         for (attr in attrs) {
             if (this.has(attr) && this.isSet(attr)) {
-              // unset
+                // unset
 
-              var feature = getEStructuralFeature(this.eClass, attr),
+                var feature = getEStructuralFeature(this.eClass, attr),
                   isContainment = Boolean(feature.get('containment')) === true;
-              var value = this.values[attr];
+                var value = this.values[attr];
 
                 if (isContainment) {
-                  value.eContainingFeature = undefined;
-                  value.eContainer = undefined;
+                    value.eContainingFeature = undefined;
+                    value.eContainer = undefined;
                 }
-              this.values[attr] = undefined;
-              eve = 'unset:' + attr;
-              this.trigger('unset ' + eve, attr);
-              if (eResource) eResource.trigger('change', this);
+                this.values[attr] = undefined;
+                eve = 'unset:' + attr;
+                this.trigger('unset ' + eve, attr);
+                if (eResource) eResource.trigger('change', this);
             }
         }
 
@@ -493,7 +493,7 @@ Ecore.EObjectPrototype = {
         if (this.isTypeOf(type)) return true;
 
         var typeName = type.eClass ? type.get('name') : type,
-            superTypes = this.eClass.get('eAllSuperTypes');
+          superTypes = this.eClass.get('eAllSuperTypes');
 
         return _.any(superTypes, function(eSuper) {
             return eSuper.get('name') === typeName;
@@ -537,8 +537,8 @@ Ecore.EObjectPrototype = {
             var eAllFeatures    = this.eClass.get('eAllStructuralFeatures');
             var eContainments   = _.filter(eAllFeatures, function(feature) {
                 return feature.isTypeOf('EReference') &&
-                    feature.get('containment') &&
-                    this.isSet(feature.get('name'));
+                  feature.get('containment') &&
+                  this.isSet(feature.get('name'));
             }, this);
 
             var value = null;
@@ -563,13 +563,13 @@ Ecore.EObjectPrototype = {
     //
 
     eURI: function() {
-    	
-    	// It's possible the adjustments for the id map need to made 
-    	// in the fragment function as the fragment should be the xmi id.
+
+        // It's possible the adjustments for the id map need to made
+        // in the fragment function as the fragment should be the xmi id.
         var eModel = this.eResource();
-        
+
         return (eModel? eModel.get('uri') : '') + '#' + this.fragment();
-        
+
     },
 
     // Returns the fragment identifier of the EObject.
@@ -578,11 +578,11 @@ Ecore.EObjectPrototype = {
 
     fragment: function() {
         var eContainer = this.eContainer,
-            eClass = this.eClass,
-            iD = eClass.get('eIDAttribute'),
-            eFeature,
-            contents,
-            fragment;
+          eClass = this.eClass,
+          iD = eClass.get('eIDAttribute'),
+          eFeature,
+          contents,
+          fragment;
 
         // Must be at least contain in a Resource or EObject.
         if (!eContainer) return null;
@@ -676,7 +676,7 @@ EList.prototype = {
         this._internal.push(eObject);
 
         var eResource = this._owner.eResource(),
-            eve = 'add';
+          eve = 'add';
 
         if (this._feature) eve += ':' + this._feature.get('name');
         this._owner.trigger(eve, eObject);
@@ -705,7 +705,7 @@ EList.prototype = {
 
     remove: function(eObject) {
         var eve = 'remove',
-            eResource = this._owner.eResource();
+          eResource = this._owner.eResource();
 
         this._internal = _.without(this._internal, eObject);
         this._size = this._size - 1;
@@ -801,22 +801,22 @@ EList.prototype = {
 //  Bootstrap Ecore Model.
 
 var EClass = new EObject(),
-    EString = new EObject(),
-    EInt = new EObject(),
-    EBoolean = new EObject(),
-    EDouble = new EObject(),
-    EDate = new EObject(),
-    EIntegerObject = new EObject(),
-    EFloatObject = new EObject(),
-    ELongObject = new EObject(),
-    EMap = new EObject(),
-    EDiagnosticChain = new EObject(),
-    JSObject = new EObject(),
-    EClass_abstract = new EObject(),
-    EClass_interface = new EObject(),
-    EClass_eStructuralFeatures = new EObject(),
-    EClass_eOperations = new EObject(),
-    EClass_eSuperTypes = new EObject();
+  EString = new EObject(),
+  EInt = new EObject(),
+  EBoolean = new EObject(),
+  EDouble = new EObject(),
+  EDate = new EObject(),
+  EIntegerObject = new EObject(),
+  EFloatObject = new EObject(),
+  ELongObject = new EObject(),
+  EMap = new EObject(),
+  EDiagnosticChain = new EObject(),
+  JSObject = new EObject(),
+  EClass_abstract = new EObject(),
+  EClass_interface = new EObject(),
+  EClass_eStructuralFeatures = new EObject(),
+  EClass_eOperations = new EObject(),
+  EClass_eSuperTypes = new EObject();
 
 
 // EClass
@@ -847,9 +847,9 @@ EClass.values = {
         if (!this._eAllSuperTypes) {
             var compute = function(eClass) {
                 var superTypes = eClass.get('eSuperTypes').array(),
-                    eAllSuperTypes = _.flatten(_.map(superTypes, function(s) {
-                        return s.get('eAllSuperTypes');
-                    }));
+                  eAllSuperTypes = _.flatten(_.map(superTypes, function(s) {
+                      return s.get('eAllSuperTypes');
+                  }));
 
                 return _.union(eAllSuperTypes, superTypes);
             };
@@ -905,7 +905,7 @@ EClass.values = {
         eID = _.filter(eAttributes, function(a) {
             return a.get('iD') === true;
         });
-        
+
         // Return the first reference with a true iD flag
         return _.isArray(eID) ? eID[0] : null;
     },
@@ -925,25 +925,25 @@ EClass.values = {
     },
     eAllAttributes: function() {
         var eAllFeatures = this.get('eAllStructuralFeatures'),
-            eAllAttributes = _.filter(eAllFeatures || [], function(f) {
-                return f.eClass === Ecore.EAttribute;
-            });
+          eAllAttributes = _.filter(eAllFeatures || [], function(f) {
+              return f.eClass === Ecore.EAttribute;
+          });
 
         return eAllAttributes;
     },
     eAllContainments: function() {
         var eAllFeatures = this.get('eAllStructuralFeatures'),
-            eAllContainments = _.filter(eAllFeatures, function(f) {
-                return f.eClass === Ecore.EReference && f.get('containment');
-            });
+          eAllContainments = _.filter(eAllFeatures, function(f) {
+              return f.eClass === Ecore.EReference && f.get('containment');
+          });
 
         return eAllContainments;
     },
     eAllReferences: function() {
         var eAllFeatures = this.get('eAllStructuralFeatures'),
-            eAllReferences = _.filter(eAllFeatures, function(f) {
-                return f.eClass === Ecore.EReference && !f.get('containment');
-            });
+          eAllReferences = _.filter(eAllFeatures, function(f) {
+              return f.eClass === Ecore.EReference && !f.get('containment');
+          });
 
         return eAllReferences;
     }
@@ -984,11 +984,11 @@ EClass_eOperations.values = {
     containment: true
 };
 EClass.get('eStructuralFeatures')
-    .add(EClass_abstract)
-    .add(EClass_interface)
-    .add(EClass_eSuperTypes)
-    .add(EClass_eStructuralFeatures)
-    .add(EClass_eOperations);
+  .add(EClass_abstract)
+  .add(EClass_interface)
+  .add(EClass_eSuperTypes)
+  .add(EClass_eStructuralFeatures)
+  .add(EClass_eOperations);
 
 
 // EClass derived features
@@ -1085,15 +1085,15 @@ EClass_eIDAttribute.values = {
 };
 
 EClass.get('eStructuralFeatures')
-    .add(EClass_eAllStructuralFeatures)
-    .add(EClass_eAllSuperTypes)
-    .add(EClass_eAllSubTypes)
-    .add(EClass_eAllAttributes)
-    .add(EClass_eAllReferences)
-    .add(EClass_eAllContainments)
-    .add(EClass_eAttributes)
-    .add(EClass_eReferences)
-    .add(EClass_eIDAttribute);
+  .add(EClass_eAllStructuralFeatures)
+  .add(EClass_eAllSuperTypes)
+  .add(EClass_eAllSubTypes)
+  .add(EClass_eAllAttributes)
+  .add(EClass_eAllReferences)
+  .add(EClass_eAllContainments)
+  .add(EClass_eAttributes)
+  .add(EClass_eReferences)
+  .add(EClass_eIDAttribute);
 
 // EClass EOperations
 
@@ -1126,22 +1126,22 @@ EClass.values.eOperations._setFeature(EClass_eOperations);
 // Initialize remaining EClasses
 
 var EObjectClass = EClass.create(),
-    EModelElement = EClass.create(),
-    EAnnotation = EClass.create(),
-    ENamedElement = EClass.create(),
-    EPackage = EClass.create(),
-    EClassifier = EClass.create(),
-    EDataType = EClass.create(),
-    EEnum = EClass.create(),
-    ETypedElement = EClass.create(),
-    EStructuralFeature = EClass.create(),
-    EAttribute = EClass.create(),
-    EReference = EClass.create(),
-    EOperation = EClass.create(),
-    EParameter = EClass.create(),
-    EEnumLiteral = EClass.create(),
-    EGenericType = EClass.create(),
-    ETypeParameter = EClass.create();
+  EModelElement = EClass.create(),
+  EAnnotation = EClass.create(),
+  ENamedElement = EClass.create(),
+  EPackage = EClass.create(),
+  EClassifier = EClass.create(),
+  EDataType = EClass.create(),
+  EEnum = EClass.create(),
+  ETypedElement = EClass.create(),
+  EStructuralFeature = EClass.create(),
+  EAttribute = EClass.create(),
+  EReference = EClass.create(),
+  EOperation = EClass.create(),
+  EParameter = EClass.create(),
+  EEnumLiteral = EClass.create(),
+  EGenericType = EClass.create(),
+  ETypeParameter = EClass.create();
 
 // Set eClass and necessary values for EClass features.
 
@@ -1220,12 +1220,12 @@ EGenericType.get('eSuperTypes').add(EObjectClass);
 //      - eType: EClassifier
 
 var ETypedElement_eType = new EObject(),
-    ETypedElement_ordered = new EObject(),
-    ETypedElement_unique = new EObject(),
-    ETypedElement_lowerBound = new EObject(),
-    ETypedElement_upperBound = new EObject(),
-    ETypedElement_many = new EObject(),
-    ETypedElement_required = new EObject();
+  ETypedElement_ordered = new EObject(),
+  ETypedElement_unique = new EObject(),
+  ETypedElement_lowerBound = new EObject(),
+  ETypedElement_upperBound = new EObject(),
+  ETypedElement_many = new EObject(),
+  ETypedElement_required = new EObject();
 
 ETypedElement_eType.eClass = EReference;
 ETypedElement_eType.values = {
@@ -1295,13 +1295,13 @@ ETypedElement_required.values = {
 };
 
 ETypedElement.get('eStructuralFeatures')
-    .add(ETypedElement_eType)
-    .add(ETypedElement_ordered)
-    .add(ETypedElement_unique)
-    .add(ETypedElement_lowerBound)
-    .add(ETypedElement_upperBound)
-    .add(ETypedElement_many)
-    .add(ETypedElement_required);
+  .add(ETypedElement_eType)
+  .add(ETypedElement_ordered)
+  .add(ETypedElement_unique)
+  .add(ETypedElement_lowerBound)
+  .add(ETypedElement_upperBound)
+  .add(ETypedElement_many)
+  .add(ETypedElement_required);
 
 // EModelElement
 //  - references:
@@ -1351,21 +1351,21 @@ ENamedElement.get('eStructuralFeatures').add(ENamedElement_name);
 //      - derived: Boolean
 
 var EStructuralFeature_changeable = EAttribute.create({ name: 'changeable', eType: EBoolean }),
-    EStructuralFeature_volatile = EAttribute.create({ name: 'volatile', eType: EBoolean }),
-    EStructuralFeature_transient = EAttribute.create({ name: 'transient', eType: EBoolean }),
-    EStructuralFeature_defaultValueLiteral = EAttribute.create({ name: 'defaultValueLiteral', eType: EString }),
-    EStructuralFeature_defaultValue = EAttribute.create({ name: 'defaultValue', eType: JSObject, derived: true }),
-    EStructuralFeature_unsettable = EAttribute.create({ name: 'unsettable', eType: EBoolean }),
-    EStructuralFeature_derived = EAttribute.create({ name: 'derived', eType: EBoolean });
+  EStructuralFeature_volatile = EAttribute.create({ name: 'volatile', eType: EBoolean }),
+  EStructuralFeature_transient = EAttribute.create({ name: 'transient', eType: EBoolean }),
+  EStructuralFeature_defaultValueLiteral = EAttribute.create({ name: 'defaultValueLiteral', eType: EString }),
+  EStructuralFeature_defaultValue = EAttribute.create({ name: 'defaultValue', eType: JSObject, derived: true }),
+  EStructuralFeature_unsettable = EAttribute.create({ name: 'unsettable', eType: EBoolean }),
+  EStructuralFeature_derived = EAttribute.create({ name: 'derived', eType: EBoolean });
 
 EStructuralFeature.get('eStructuralFeatures')
-    .add(EStructuralFeature_changeable)
-    .add(EStructuralFeature_volatile)
-    .add(EStructuralFeature_transient)
-    .add(EStructuralFeature_defaultValueLiteral)
-    .add(EStructuralFeature_defaultValue)
-    .add(EStructuralFeature_unsettable)
-    .add(EStructuralFeature_derived);
+  .add(EStructuralFeature_changeable)
+  .add(EStructuralFeature_volatile)
+  .add(EStructuralFeature_transient)
+  .add(EStructuralFeature_defaultValueLiteral)
+  .add(EStructuralFeature_defaultValue)
+  .add(EStructuralFeature_unsettable)
+  .add(EStructuralFeature_derived);
 
 EStructuralFeature_defaultValue.set({ derived: true });
 
@@ -1378,15 +1378,15 @@ EStructuralFeature_defaultValue.set({ derived: true });
 //      - eOpposite
 
 var EReference_containment = EAttribute.create({ name: 'containment', eType: EBoolean }),
-    EReference_container = EAttribute.create({ name: 'container', eType: EBoolean }),
-    EReference_resolveProxies = EAttribute.create({ name: 'resolveProxies', eType: EBoolean }),
-    EReference_eOpposite = EReference.create({ name: 'eOpposite', eType: EReference });
+  EReference_container = EAttribute.create({ name: 'container', eType: EBoolean }),
+  EReference_resolveProxies = EAttribute.create({ name: 'resolveProxies', eType: EBoolean }),
+  EReference_eOpposite = EReference.create({ name: 'eOpposite', eType: EReference });
 
 EReference.get('eStructuralFeatures')
-    .add(EReference_containment)
-    .add(EReference_container)
-    .add(EReference_resolveProxies)
-    .add(EReference_eOpposite);
+  .add(EReference_containment)
+  .add(EReference_container)
+  .add(EReference_resolveProxies)
+  .add(EReference_eOpposite);
 
 // EAttribute
 //  - attributes
@@ -1436,8 +1436,8 @@ var EEnum_eLiterals = EReference.create({
 EEnum.get('eStructuralFeatures').add(EEnum_eLiterals);
 
 EEnumLiteral.get('eStructuralFeatures')
-    .add(EAttribute.create({ name: 'literal', eType: EString }))
-    .add(EAttribute.create({ name: 'value', eType: EInt }));
+  .add(EAttribute.create({ name: 'literal', eType: EString }))
+  .add(EAttribute.create({ name: 'value', eType: EInt }));
 
 // EStringToStringMapEntry
 //  - attributes
@@ -1463,8 +1463,8 @@ var EStringToStringMapEntry_value = EAttribute.create({
 });
 
 EStringToStringMapEntry.get('eStructuralFeatures')
-    .add(EStringToStringMapEntry_key)
-    .add(EStringToStringMapEntry_value);
+  .add(EStringToStringMapEntry_key)
+  .add(EStringToStringMapEntry_value);
 
 // EAnnotation
 // - attributes:
@@ -1487,8 +1487,8 @@ var EAnnotation_details = EReference.create({
 });
 
 EAnnotation.get('eStructuralFeatures')
-    .add(EAnnotation_source)
-    .add(EAnnotation_details);
+  .add(EAnnotation_source)
+  .add(EAnnotation_details);
 
 // EGenericType
 //
@@ -1526,11 +1526,11 @@ var EGenericType_eClassifier = EReference.create({
 });
 
 EGenericType.get('eStructuralFeatures')
-    .add(EGenericType_eTypeParameter)
-    .add(EGenericType_eUpperBound)
-    .add(EGenericType_eLowerBound)
-    .add(EGenericType_eTypeArguments)
-    .add(EGenericType_eClassifier);
+  .add(EGenericType_eTypeParameter)
+  .add(EGenericType_eUpperBound)
+  .add(EGenericType_eLowerBound)
+  .add(EGenericType_eTypeArguments)
+  .add(EGenericType_eClassifier);
 
 
 var ETypedElement_eGenericType = EReference.create({
@@ -1541,7 +1541,7 @@ var ETypedElement_eGenericType = EReference.create({
 });
 
 ETypedElement.get('eStructuralFeatures')
-    .add(ETypedElement_eGenericType);
+  .add(ETypedElement_eGenericType);
 
 
 var EClass_eGenericTypes = EReference.create({
@@ -1552,7 +1552,7 @@ var EClass_eGenericTypes = EReference.create({
 });
 
 EClass.get('eStructuralFeatures')
-    .add(EClass_eGenericTypes);
+  .add(EClass_eGenericTypes);
 
 
 var EOperation_eGenericExceptions = EReference.create({
@@ -1563,7 +1563,7 @@ var EOperation_eGenericExceptions = EReference.create({
 });
 
 EOperation.get('eStructuralFeatures')
-    .add(EOperation_eGenericExceptions);
+  .add(EOperation_eGenericExceptions);
 
 // ETypeParameter
 //
@@ -1583,8 +1583,8 @@ var ETypeParameter_eGenericTypes = EReference.create({
 });
 
 ETypeParameter.get('eStructuralFeatures')
-    .add(ETypeParameter_eBounds)
-    .add(ETypeParameter_eGenericTypes);
+  .add(ETypeParameter_eBounds)
+  .add(ETypeParameter_eGenericTypes);
 
 
 var EClassifier_eTypeParameters = EReference.create({
@@ -1595,7 +1595,7 @@ var EClassifier_eTypeParameters = EReference.create({
 });
 
 EClassifier.get('eStructuralFeatures')
-    .add(EClassifier_eTypeParameters);
+  .add(EClassifier_eTypeParameters);
 
 
 var EOperation_eTypeParameters = EReference.create({
@@ -1606,7 +1606,7 @@ var EOperation_eTypeParameters = EReference.create({
 });
 
 EOperation.get('eStructuralFeatures')
-    .add(EOperation_eTypeParameters);
+  .add(EOperation_eTypeParameters);
 
 
 // Setting core datatypes values
@@ -1670,10 +1670,10 @@ var EPackage_eSubPackages = EReference.create({
 });
 
 EPackage.get('eStructuralFeatures')
-    .add(EAttribute.create({ name: 'nsURI', eType: EString }))
-    .add(EAttribute.create({ name: 'nsPrefix', eType: EString }))
-    .add(EPackage_eClassifiers)
-    .add(EPackage_eSubPackages);
+  .add(EAttribute.create({ name: 'nsURI', eType: EString }))
+  .add(EAttribute.create({ name: 'nsPrefix', eType: EString }))
+  .add(EPackage_eClassifiers)
+  .add(EPackage_eSubPackages);
 
 // EcorePackage
 
@@ -1684,40 +1684,40 @@ Ecore.EcorePackage = EPackage.create({
 });
 
 Ecore.EcorePackage.get('eClassifiers')
-    .add(EObjectClass)
-    .add(EModelElement)
-    .add(EAnnotation)
-    .add(ENamedElement)
-    .add(EPackage)
-    .add(EClassifier)
-    .add(EClass)
-    .add(EDataType)
-    .add(ETypedElement)
-    .add(EStructuralFeature)
-    .add(EAttribute)
-    .add(EReference)
-    .add(EOperation)
-    .add(EParameter)
-    .add(EEnum)
-    .add(EEnumLiteral)
-    .add(ETypeParameter)
-    .add(EGenericType)
-    .add(EStringToStringMapEntry)
-    .add(EString)
-    .add(EBoolean)
-    .add(EInt)
-    .add(EDouble)
-    .add(EIntegerObject)
-    .add(EFloatObject)
-    .add(ELongObject)
-    .add(EMap)
-    .add(EDiagnosticChain)
-    .add(EDate)
-    .add(Ecore.EShort)
-    .add(Ecore.EFloat)
-    .add(Ecore.ELong)
-    .add(Ecore.EDoubleObject)
-    .add(JSObject);
+  .add(EObjectClass)
+  .add(EModelElement)
+  .add(EAnnotation)
+  .add(ENamedElement)
+  .add(EPackage)
+  .add(EClassifier)
+  .add(EClass)
+  .add(EDataType)
+  .add(ETypedElement)
+  .add(EStructuralFeature)
+  .add(EAttribute)
+  .add(EReference)
+  .add(EOperation)
+  .add(EParameter)
+  .add(EEnum)
+  .add(EEnumLiteral)
+  .add(ETypeParameter)
+  .add(EGenericType)
+  .add(EStringToStringMapEntry)
+  .add(EString)
+  .add(EBoolean)
+  .add(EInt)
+  .add(EDouble)
+  .add(EIntegerObject)
+  .add(EFloatObject)
+  .add(ELongObject)
+  .add(EMap)
+  .add(EDiagnosticChain)
+  .add(EDate)
+  .add(Ecore.EShort)
+  .add(Ecore.EFloat)
+  .add(Ecore.ELong)
+  .add(Ecore.EDoubleObject)
+  .add(JSObject);
 
 Ecore.EObject = EObjectClass;
 Ecore.EModelElement = EModelElement;

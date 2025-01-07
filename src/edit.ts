@@ -92,13 +92,13 @@ Ecore.Edit = {
     _get: function(fn, object) {
         if (!object || !object.eClass) return null;
 
-         var eClass = object.eClass.get('name');
-         if (this[eClass]) {
-             if (typeof this[eClass][fn] === 'function') {
-                 return this[eClass][fn](object);
-             } else {
-                 return this[eClass][fn];
-             }
+        var eClass = object.eClass.get('name');
+        if (this[eClass]) {
+            if (typeof this[eClass][fn] === 'function') {
+                return this[eClass][fn](object);
+            } else {
+                return this[eClass][fn];
+            }
         } else {
             return object.eClass.get('name');
         }

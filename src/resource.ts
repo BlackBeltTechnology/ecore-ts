@@ -17,7 +17,7 @@ Ecore.JSON = {
         }
 
         var toResolve = [],
-            resourceSet = model.get('resourceSet') || Ecore.ResourceSet.create();
+          resourceSet = model.get('resourceSet') || Ecore.ResourceSet.create();
 
         function processFeature(object, eObject) {
             if (!object || !eObject)
@@ -27,7 +27,7 @@ Ecore.JSON = {
                 if (!feature || feature.get('derived')) return;
 
                 var featureName = feature.get('name'),
-                    value = object[featureName];
+                  value = object[featureName];
 
                 if (typeof value !== 'undefined') {
                     if ( feature.isTypeOf('EAttribute') ) {
@@ -87,8 +87,8 @@ Ecore.JSON = {
 
             _.each(toResolve, function(resolving) {
                 var parent = resolving.parent,
-                    feature = resolving.feature,
-                    value = resolving.value;
+                  feature = resolving.feature,
+                  value = resolving.value;
 
                 if (feature.get('upperBound') === 1) {
                     setReference(parent, feature, value, false);
@@ -105,7 +105,7 @@ Ecore.JSON = {
 
             if (object && (eClass || object.eClass)) {
                 if (object.eClass) {
-	                eClass = resourceSet.getEObject(object.eClass);
+                    eClass = resourceSet.getEObject(object.eClass);
                 }
 
                 try {
@@ -143,13 +143,13 @@ Ecore.JSON = {
 
     to: function(model) {
         var contents = model.get('contents').array(),
-            indexes = {};
-            indexes[model.get('uri')] = buildIndex(model);
+          indexes = {};
+        indexes[model.get('uri')] = buildIndex(model);
 
         function uri(owner, value) {
             var valueModel = value.eResource(),
-                ownerModel = owner.eResource(),
-                external = valueModel !== ownerModel;
+              ownerModel = owner.eResource(),
+              external = valueModel !== ownerModel;
 
             if (!valueModel || !ownerModel) return;
             if (!indexes[valueModel.get('uri')]) {
@@ -170,7 +170,7 @@ Ecore.JSON = {
             if (isContainment === true) {
                 return jsonObject(value);
             } else {
-               return { '$ref': uri(object, value), 'eClass': value.eClass.eURI() };
+                return { '$ref': uri(object, value), 'eClass': value.eClass.eURI() };
             }
         }
 
@@ -180,14 +180,14 @@ Ecore.JSON = {
             return function( num, key ) {
                 if (key[0] === '_') return;
                 var feature = object.eClass.getEStructuralFeature(key),
-                    isSet = object.isSet(key);
+                  isSet = object.isSet(key);
 
                 if (!feature || !isSet || feature.get('derived')) return;
 
                 var value = num,
-                    featureName = feature.get('name'),
-                    isMany = feature.get('upperBound') !== 1,
-                    isContainment = feature.get('containment');
+                  featureName = feature.get('name'),
+                  isMany = feature.get('upperBound') !== 1,
+                  isContainment = feature.get('containment');
 
                 if (feature.isTypeOf('EAttribute')) {
                     data[featureName] = value;
@@ -223,8 +223,8 @@ Ecore.JSON = {
 
         function jsonObject(object) {
             var eClass = object.eClass,
-                values = object.values,
-                data = { eClass: eClass.eURI() };
+              values = object.values,
+              data = { eClass: eClass.eURI() };
 
             if (object._id) { data._id = object._id; }
 
@@ -322,7 +322,7 @@ var EClassResource = Ecore.Resource = Ecore.EClass.create({
             eType: Ecore.EObject,
             _: function(fragment) {
                 if (!fragment) return null;
-                
+
                 if(this._index()[fragment]) {
                     return this._index()[fragment];
                 }
@@ -445,13 +445,13 @@ URIConverter.prototype = {
 
     normalize: function(uri) {
         var split = uri.split('#'),
-            base = split[0],
-            normalized = this.uriMap[base];
+          base = split[0],
+          normalized = this.uriMap[base];
 
         if (normalized) return normalized;
 
         var slashIndex = base.lastIndexOf('/') + 1,
-            sliced, rest;
+          sliced, rest;
 
         sliced = base.slice(0, slashIndex);
 
@@ -522,12 +522,12 @@ var EClassResourceSet = Ecore.ResourceSet = Ecore.EClass.create({
             name: 'getEObject',
             _: function(uri) {
                 var split = uri.split('#'),
-                    base = split[0],
-                    fragment = split[1],
-                    resource;
-                
+                  base = split[0],
+                  fragment = split[1],
+                  resource;
+
                 if (!fragment) {
-                	return null;
+                    return null;
                 }
 
                 var ePackage = Ecore.EPackage.Registry.getEPackage(base);
@@ -647,7 +647,7 @@ Ecore.EPackage.Registry.register(EPackageResource);
 
 function buildIndex(model) {
     var index = {},
-        contents = model.get('contents').array();
+      contents = model.get('contents').array();
 
     if (contents.length) {
         var build = function(object, idx) {
