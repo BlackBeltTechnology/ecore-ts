@@ -2,49 +2,47 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-fs = require('fs');
-util = require('util');
-//Ecore = require('ecore/dist/ecore.xmi');
-Ecore = require('../../dist/ecore.xmi');
+import fs from 'node:fs';
+import { ResourceSet, EPackage, XMI } from '../../dist/ecore.js';
 
-var resourceSet = Ecore.ResourceSet.create();
+let resourceSet = ResourceSet.create();
 
 //////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////
 function processFile(file) {
 
-  var resource = resourceSet.create({uri : file});
+  let resource = resourceSet.create({ uri : file });
 
-  var fileContents = fs.readFileSync(file, 'utf8');
+  let fileContents = fs.readFileSync(file, 'utf8');
 
   if (catchError) {
-    try { 
-      resource.parse(fileContents, Ecore.XMI);
+    try {
+      resource.parse(fileContents, XMI);
     } catch(err) {
       console.log('*** Failed parsing file: ' + file);
       console.trace(err);
       return;
     }
   } else {
-    resource.parse(fileContents, Ecore.XMI);
+    resource.parse(fileContents, XMI);
   }
 
-  var firstElement = resource.get('contents').first();
+  let firstElement = resource.get('contents').first();
   if(firstElement.eClass.values.name === 'EPackage') {
     // This is an EPackage, so add it to the registry
     console.log("::: Adding to registry: " + firstElement.get('name'));
-    Ecore.EPackage.Registry.register(firstElement);
+    EPackage.Registry.register(firstElement);
   }
 
   if (showJSON) {
     console.log("::: JSON Dump of " + file);
-    console.log(util.inspect(resource.to(Ecore.JSON), false, null));
+    console.log(JSON.stringify(resource.to(JSON), null, 4));
   }
-  
+
   if (showXMI) {
     console.log("::: XMI Dump of " + file);
-    console.log(resource.to(Ecore.XMI, true));
+    console.log(resource.to(XMI, true));
   }
 
 }
@@ -53,14 +51,14 @@ function processFile(file) {
 //  Main Processing
 //////////////////////////////////////////////////////////////////////////
 
-var showJSON = false;
-var showXMI = false;
-var showModel = false;
-var catchError = false;
+let showJSON = false;
+let showXMI = false;
+let showModel = false;
+let catchError = false;
 
-for(var argidx = 2; argidx < process.argv.length; argidx++) {
+for(let argidx = 2; argidx < process.argv.length; argidx++) {
   // Process each file that is passed on the command line
-  var argument = process.argv[argidx];
+  let argument = process.argv[argidx];
 
   if (argument === "-showJSON") {
     showJSON = !showJSON;
@@ -69,7 +67,7 @@ for(var argidx = 2; argidx < process.argv.length; argidx++) {
   } else if (argument === "-catchError") {
     catchError = !catchError;
   } else {
-    var fileName = argument;
+    let fileName = argument;
     console.log('::: Processing ' + fileName);
     processFile(fileName);
   }

@@ -1493,8 +1493,6 @@ const EPackage_eSubPackages = EReference.create({
   eType: EPackage,
 })!;
 
-console.log(EPackage.get('eStructuralFeatures'));
-
 EPackage.get('eStructuralFeatures')
   .add(EAttribute.create({ name: 'nsURI', eType: EString }))
   .add(EAttribute.create({ name: 'nsPrefix', eType: EString }))
