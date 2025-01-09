@@ -67,7 +67,7 @@ export class EObject {
     // noop
   }
 
-  on(events: any, callback: any, context: any) {
+  on(events: any, callback: any, context?: any) {
     let calls, event, list;
     if (!callback) return this;
 
@@ -374,13 +374,13 @@ export class EObject {
     return (eModel ? eModel.get('uri') : '') + '#' + this.fragment();
   }
 
-  fragment() {
+  fragment(): string | null {
     let eContainer = this.eContainer,
       eClass = this.eClass,
       iD = eClass.get('eIDAttribute'),
       eFeature,
       contents,
-      fragment;
+      fragment: string | null = null;
 
     // Must be at least contain in a Resource or EObject.
     if (!eContainer) return null;
@@ -645,6 +645,10 @@ export class EList {
 
   contains(object: any) {
     return this._internal.includes(object);
+  }
+
+  indexOf(object: any): number {
+    return this._internal.indexOf(object);
   }
 }
 

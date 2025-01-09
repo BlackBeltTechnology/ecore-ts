@@ -17,7 +17,7 @@ export const XMI = {
     function findNamespaces(attributes: any) {
       if (!attributes) return;
 
-      attributes.forEach((num: any, key: any) => {
+      Object.entries(attributes).forEach(([key, num]) => {
         if (key.indexOf(':') !== -1) {
           const split = key.split(':');
           if (split[0] === 'xmlns') {
@@ -120,7 +120,7 @@ export const XMI = {
             rootObject = eObject;
           }
 
-          node.attributes.forEach((num: any, key: any) => {
+          Object.entries(node.attributes).forEach(([key, num]) => {
             if (eObject.has(key)) {
               eFeature = eObject.eClass.getEStructuralFeature(key);
               if (eFeature.isTypeOf('EAttribute')) {

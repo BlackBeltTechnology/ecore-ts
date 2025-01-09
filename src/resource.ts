@@ -19,6 +19,7 @@ import {
   JSObject,
   create,
 } from './ecore.ts';
+import { XMI } from './xmi.ts';
 
 export let ResourceSet: EObject | undefined;
 
@@ -71,7 +72,7 @@ export const EJSON = {
         if (Array.isArray(node.details)) {
         } else {
           const details = eObject.get('details');
-          node.details.forEach((v: any, k: any) => {
+          Object.entries(node.details).forEach(([k, v]) => {
             details.add(EStringToStringMapEntry.create({ key: k, value: v }));
           });
         }
@@ -375,8 +376,9 @@ export const Resource = EClass.create({
       eClass: EOperation,
       name: 'parse',
       _: function (data: any, loader: any) {
-        if (loader && typeof loader.parse === 'function')
-          loader.parse(this, data);
+        if (loader && loader === XMI) loader.parse(this, data);
+        else if (loader && loader !== EJSON)
+          EJSON.parse(this, loader.parse(data));
         else EJSON.parse(this, data);
         return this;
       },
