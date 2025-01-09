@@ -1,27 +1,25 @@
+import { ResourceSet, EReference, EPackage, EAttribute, EClass, EString } from '../../dist/ecore.js';
+
 function main() {
 
-    //
-    // Using ecorejs events
-    //
-
-    var rs = Ecore.ResourceSet.create();
+    let rs = ResourceSet.create();
 
     //
     // init model
     //
 
-    var r = rs.create({ uri: 'res' });
-    var p = Ecore.EPackage.create({
+    let r = rs.create({ uri: 'res' });
+    let p = EPackage.create({
         name: 'model',
         nsPrefix: 'model',
         nsURI: 'http://ecore.js/model'
     });
-    var Person = Ecore.EClass.create({
+    let Person = EClass.create({
         name: 'Person'
     });
-    var Person_name = Ecore.EAttribute.create({
+    let Person_name = EAttribute.create({
         name: 'name',
-        eType: Ecore.EString
+        eType: EString
     });
     Person.get('eStructuralFeatures').add(Person_name);
     p.get('eClassifiers').add(Person);
@@ -29,11 +27,11 @@ function main() {
 
     // listen to added features on Person
 
-    Person.on('add:eStructuralFeatures', function(feature) {
+    Person.on('add:eStructuralFeatures', (feature) => {
         console.log(feature.get('name'), 'has been added');
     });
 
-    var Person_knows = Ecore.EReference.create({
+    let Person_knows = EReference.create({
         name: 'knows',
         upperBound: -1,
         eType: Person
@@ -42,23 +40,23 @@ function main() {
 
     // create instances
 
-    var p1 = Person.create();
+    let p1 = Person.create();
 
     // listen to set feature
 
-    p1.on('change', function(f) {
+    p1.on('change', (f) => {
         console.log('change feature:', f, 'new value is:', p1.get(f));
     });
 
-    var p2 = Person.create({ name: 'John' });
-    var p3 = Person.create({ name: 'Phil' });
+    let p2 = Person.create({ name: 'John' });
+    let p3 = Person.create({ name: 'Phil' });
 
-    var r2 = rs.create({ uri: 'r2' });
+    let r2 = rs.create({ uri: 'r2' });
     r2.get('contents').add(p1).add(p2).add(p3);
 
     // listen to changes at resource level
 
-    r2.on('add change', function(o) {
+    r2.on('add change', (o) => {
         console.log('object changed', o);
     });
 

@@ -1,52 +1,47 @@
-var assert  = require('assert');
-var Ecore   = require('../dist/ecore.js');
-var _       = require('underscore');
+var assert = require('assert');
+var Ecore = require('../dist/ecore.js');
+var _ = require('underscore');
 
+describe('EObject.eContents', function () {
+  var resource, p;
 
-describe('EObject.eContents', function() {
+  beforeEach(function () {
+    var resourceSet = Ecore.ResourceSet.create();
 
-    var resource, p;
+    p = Ecore.EPackage.create({ name: 'p' });
+    var a = Ecore.EClass.create({ name: 'A' });
+    var b = Ecore.EClass.create({ name: 'B' });
 
-    beforeEach(function() {
-        var resourceSet = Ecore.ResourceSet.create();
+    p.get('eClassifiers').add(a).add(b);
 
-        p = Ecore.EPackage.create({ name: 'p' });
-        var a = Ecore.EClass.create({ name: 'A' });
-        var b = Ecore.EClass.create({ name: 'B' });
+    resource = resourceSet.create('test');
+    resource.add(p);
+  });
 
-        p.get('eClassifiers')
-            .add(a)
-            .add(b);
+  it('should return content of the object', function () {
+    var contents = p.eContents();
 
-        resource = resourceSet.create('test');
-        resource.add(p);
-    });
+    assert.ok(contents);
+    assert.equal(2, contents.length);
+  });
 
-    it('should return content of the object', function() {
-        var contents = p.eContents();
+  it('should be updated when adding an element', function () {
+    p.get('eClassifiers').add(Ecore.EClass.create({ name: 'C' }));
 
-        assert.ok(contents);
-        assert.equal(2, contents.length);
-    })
+    var contents = p.eContents();
 
-    it('should be updated when adding an element', function() {
-        p.get('eClassifiers').add(Ecore.EClass.create({ name: 'C' }));
+    assert.ok(contents);
+    assert.equal(3, contents.length);
+    assert.strictEqual(contents, p.eContents());
+  });
 
-        var contents = p.eContents();
+  it('should be updated when removing an element', function () {
+    p.get('eClassifiers').remove(p.get('eClassifiers').at(1));
 
-        assert.ok(contents);
-        assert.equal(3, contents.length);
-        assert.strictEqual(contents, p.eContents());
-    })
+    var contents = p.eContents();
 
-    it('should be updated when removing an element', function() {
-        p.get('eClassifiers').remove(p.get('eClassifiers').at(1));
-
-        var contents = p.eContents();
-
-        assert.ok(contents);
-        assert.equal(1, contents.length);
-        assert.strictEqual(contents, p.eContents());
-    })
-
-})
+    assert.ok(contents);
+    assert.equal(1, contents.length);
+    assert.strictEqual(contents, p.eContents());
+  });
+});

@@ -1,9 +1,12 @@
 {
-  "eClass" : "http://www.example.org/test5#//Info",
-  "name" : "info",
-  "subInfo" : [ {
-    "name" : "subinfo1"
-  }, {
-    "name" : "subinfo2"
-  } ]
+  "eClass": "http://www.example.org/test5#//Info",
+  "name": "info",
+  "subInfo": [
+    {
+      "name": "subinfo1"
+    },
+    {
+      "name": "subinfo2"
+    }
+  ]
 }

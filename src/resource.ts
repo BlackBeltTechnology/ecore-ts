@@ -1,692 +1,710 @@
-
 // JSON serializer and parser for EMF.
 //
 // See https://github.com/ghillairet/emfjson for details
 // about the JSON format used for EMF Models.
 //
 //
+import { isString, isUndefined, isObject, values, flatten } from 'lodash-es';
+import {
+  EAnnotation,
+  EAttribute,
+  EClass,
+  EObject,
+  EOperation,
+  EPackage,
+  EReference,
+  EString,
+  EStringToStringMapEntry,
+  EcorePackage,
+  JSObject,
+  create,
+} from './ecore.ts';
 
-Ecore.JSON = {
+export let ResourceSet: EObject | undefined;
 
-    dataType: 'json',
-    contentType: 'application/json',
+export const EJSON = {
+  dataType: 'json',
+  contentType: 'application/json',
 
-    parse: function(model, data) {
-        if (_.isString(data)) {
-            data = JSON.parse(data);
-        }
-
-        var toResolve = [],
-          resourceSet = model.get('resourceSet') || Ecore.ResourceSet.create();
-
-        function processFeature(object, eObject) {
-            if (!object || !eObject)
-                return function() {};
-
-            return function( feature ) {
-                if (!feature || feature.get('derived')) return;
-
-                var featureName = feature.get('name'),
-                  value = object[featureName];
-
-                if (typeof value !== 'undefined') {
-                    if ( feature.isTypeOf('EAttribute') ) {
-                        eObject.set( featureName, value );
-                    } else if (feature.get('containment')) {
-                        var eType = feature.get('eType');
-                        if (feature.get('upperBound') === 1) {
-                            eObject.set( featureName, parseObject(value, eType) );
-                        } else {
-                            _.each(value || [], function(val) {
-                                eObject.get( featureName ).add( parseObject(val, eType) );
-                            });
-                        }
-                    } else {
-                        toResolve.push({ parent: eObject, feature: feature, value: value });
-                    }
-                }
-            };
-        }
-
-        function processAnnotation(node, eObject) {
-            if (node.source) {
-                eObject.set('source', node.source);
-            }
-
-            if (node.details) {
-                if (_.isArray(node.details)) {
-
-                } else {
-                    var details = eObject.get('details');
-                    _.each(node.details, function(v, k) {
-                        details.add(Ecore.EStringToStringMapEntry.create({ 'key': k, 'value': v }));
-                    });
-                }
-            }
-        }
-
-        function resolveReferences() {
-            var index = buildIndex(model);
-
-            function setReference(parent, feature, value, isMany) {
-                var ref = value.$ref;
-                var resolved = index[ref];
-
-                if (!resolved) {
-                    resolved = resourceSet.getEObject(ref);
-                }
-
-                if (resolved) {
-                    if (isMany) {
-                        parent.get(feature.get('name')).add(resolved);
-                    } else {
-                        parent.set(feature.get('name'), resolved);
-                    }
-                }
-            }
-
-            _.each(toResolve, function(resolving) {
-                var parent = resolving.parent,
-                  feature = resolving.feature,
-                  value = resolving.value;
-
-                if (feature.get('upperBound') === 1) {
-                    setReference(parent, feature, value, false);
-                } else {
-                    _.each(_.isArray(value) ? value : [value], function(val) {
-                        setReference(parent, feature, val, true);
-                    });
-                }
-            });
-        }
-
-        function parseObject(object, eClass) {
-            var child;
-
-            if (object && (eClass || object.eClass)) {
-                if (object.eClass) {
-                    eClass = resourceSet.getEObject(object.eClass);
-                }
-
-                try {
-                    child = Ecore.create(eClass);
-                } catch (e) {
-                    throw new Error('Cannot parse or cannot find EClass for object' + JSON.stringify(object));
-                }
-
-                if (child) {
-                    if (object._id) {
-                        child._id = object._id;
-                    }
-
-                    if (eClass === Ecore.EAnnotation) {
-                        processAnnotation(object, child);
-                    } else {
-                        _.each(eClass.get('eAllStructuralFeatures'), processFeature(object, child));
-                    }
-                }
-            }
-
-            return child;
-        }
-
-        if (_.isArray(data)) {
-            _.each(data, function (object) {
-                model.add(parseObject(object));
-            });
-        } else {
-            model.add(parseObject(data));
-        }
-
-        resolveReferences();
-    },
-
-    to: function(model) {
-        var contents = model.get('contents').array(),
-          indexes = {};
-        indexes[model.get('uri')] = buildIndex(model);
-
-        function uri(owner, value) {
-            var valueModel = value.eResource(),
-              ownerModel = owner.eResource(),
-              external = valueModel !== ownerModel;
-
-            if (!valueModel || !ownerModel) return;
-            if (!indexes[valueModel.get('uri')]) {
-                indexes[valueModel.get('uri')] = buildIndex(valueModel);
-            }
-
-            var index = indexes[valueModel.get('uri')];
-            for (var key in index) {
-                if (index[key] === value) {
-                    return external ? valueModel.get('uri') + '#' + key : key;
-                }
-            }
-
-            return null;
-        }
-
-        function processValue(object, value, isContainment) {
-            if (isContainment === true) {
-                return jsonObject(value);
-            } else {
-                return { '$ref': uri(object, value), 'eClass': value.eClass.eURI() };
-            }
-        }
-
-        function processFeature( object, data ) {
-            if (!object || !data) return function() {};
-
-            return function( num, key ) {
-                if (key[0] === '_') return;
-                var feature = object.eClass.getEStructuralFeature(key),
-                  isSet = object.isSet(key);
-
-                if (!feature || !isSet || feature.get('derived')) return;
-
-                var value = num,
-                  featureName = feature.get('name'),
-                  isMany = feature.get('upperBound') !== 1,
-                  isContainment = feature.get('containment');
-
-                if (feature.isTypeOf('EAttribute')) {
-                    data[featureName] = value;
-                } else {
-                    if (isMany) {
-                        data[featureName] = [];
-                        value.each(function(val) {
-                            data[featureName].push( processValue(object, val, isContainment) );
-                        });
-                    } else {
-                        data[featureName] = processValue(object, value, isContainment);
-                    }
-                }
-            };
-        }
-
-        function processAnnotation(object, data) {
-            if (object.values.source) {
-                data.source = object.values.source;
-            }
-
-            if (object.values.details && object.values.details.size() > 0) {
-                data.details = {};
-                object.values.details.each(function (e) {
-                    var key = e.get("key");
-                    var value = e.get("value");
-                    if (key) {
-                        data.details[key] = value;
-                    }
-                });
-            }
-        }
-
-        function jsonObject(object) {
-            var eClass = object.eClass,
-              values = object.values,
-              data = { eClass: eClass.eURI() };
-
-            if (object._id) { data._id = object._id; }
-
-            if (eClass === Ecore.EAnnotation) {
-                processAnnotation(object, data);
-            } else {
-                _.each(values, processFeature(object, data));
-            }
-
-            return data;
-        }
-
-        var data;
-        if (contents.length === 1) {
-            var eObject = contents[0];
-            data = jsonObject(eObject);
-        } else {
-            data = [];
-            for (var i = 0; i < contents.length; i++) {
-                data.push(jsonObject(contents[i]));
-            }
-        }
-        return data;
+  parse(model: any, data: any) {
+    if (isString(data)) {
+      data = JSON.parse(data);
     }
 
+    const toResolve: any[] = [],
+      resourceSet = model.get('resourceSet') || ResourceSet!.create();
+
+    function processFeature(object: any, eObject: any) {
+      if (!object || !eObject) return () => {};
+
+      return (feature: any) => {
+        if (!feature || feature.get('derived')) return;
+
+        const featureName = feature.get('name'),
+          value = object[featureName];
+
+        if (typeof value !== 'undefined') {
+          if (feature.isTypeOf('EAttribute')) {
+            eObject.set(featureName, value);
+          } else if (feature.get('containment')) {
+            const eType = feature.get('eType');
+            if (feature.get('upperBound') === 1) {
+              eObject.set(featureName, parseObject(value, eType));
+            } else {
+              (value || []).forEach((val: any) => {
+                eObject.get(featureName).add(parseObject(val, eType));
+              });
+            }
+          } else {
+            toResolve.push({ parent: eObject, feature: feature, value: value });
+          }
+        }
+      };
+    }
+
+    function processAnnotation(node: any, eObject: any) {
+      if (node.source) {
+        eObject.set('source', node.source);
+      }
+
+      if (node.details) {
+        if (Array.isArray(node.details)) {
+        } else {
+          const details = eObject.get('details');
+          node.details.forEach((v: any, k: any) => {
+            details.add(EStringToStringMapEntry.create({ key: k, value: v }));
+          });
+        }
+      }
+    }
+
+    function resolveReferences() {
+      const index: any = buildIndex(model);
+
+      function setReference(
+        parent: any,
+        feature: any,
+        value: any,
+        isMany: any,
+      ) {
+        const ref = value.$ref;
+        let resolved = index[ref];
+
+        if (!resolved) {
+          resolved = resourceSet.getEObject(ref);
+        }
+
+        if (resolved) {
+          if (isMany) {
+            parent.get(feature.get('name')).add(resolved);
+          } else {
+            parent.set(feature.get('name'), resolved);
+          }
+        }
+      }
+
+      toResolve.forEach((resolving) => {
+        const parent = resolving.parent,
+          feature = resolving.feature,
+          value = resolving.value;
+
+        if (feature.get('upperBound') === 1) {
+          setReference(parent, feature, value, false);
+        } else {
+          (Array.isArray(value) ? value : [value]).forEach((val) => {
+            setReference(parent, feature, val, true);
+          });
+        }
+      });
+    }
+
+    function parseObject(object: any, eClass?: EObject) {
+      let child;
+
+      if (object && (eClass || object.eClass)) {
+        if (object.eClass) {
+          eClass = resourceSet.getEObject(object.eClass);
+        }
+
+        try {
+          child = create(eClass);
+        } catch (e) {
+          throw new Error(
+            'Cannot parse or cannot find EClass for object' +
+              JSON.stringify(object),
+          );
+        }
+
+        if (child) {
+          if (object._id) {
+            child._id = object._id;
+          }
+
+          if (eClass === EAnnotation) {
+            processAnnotation(object, child);
+          } else {
+            eClass!
+              .get('eAllStructuralFeatures')
+              .forEach(processFeature(object, child));
+          }
+        }
+      }
+
+      return child;
+    }
+
+    if (Array.isArray(data)) {
+      data.forEach((object) => {
+        model.add(parseObject(object));
+      });
+    } else {
+      model.add(parseObject(data));
+    }
+
+    resolveReferences();
+  },
+
+  to: (model: any) => {
+    const contents = model.get('contents').array(),
+      indexes: any = {};
+    indexes[model.get('uri')] = buildIndex(model);
+
+    function uri(owner: any, value: any) {
+      const valueModel = value.eResource(),
+        ownerModel = owner.eResource(),
+        external = valueModel !== ownerModel;
+
+      if (!valueModel || !ownerModel) return;
+      if (!indexes[valueModel.get('uri')]) {
+        indexes[valueModel.get('uri')] = buildIndex(valueModel);
+      }
+
+      const index = indexes[valueModel.get('uri')];
+      for (const key in index) {
+        if (index[key] === value) {
+          return external ? valueModel.get('uri') + '#' + key : key;
+        }
+      }
+
+      return null;
+    }
+
+    function processValue(object: any, value: any, isContainment: any) {
+      if (isContainment === true) {
+        return jsonObject(value);
+      } else {
+        return { $ref: uri(object, value), eClass: value.eClass.eURI() };
+      }
+    }
+
+    function processFeature(object: any, data: any) {
+      if (!object || !data) return () => {};
+
+      return (num: any, key: any) => {
+        if (key[0] === '_') return;
+        const feature = object.eClass.getEStructuralFeature(key),
+          isSet = object.isSet(key);
+
+        if (!feature || !isSet || feature.get('derived')) return;
+
+        const value = num,
+          featureName = feature.get('name'),
+          isMany = feature.get('upperBound') !== 1,
+          isContainment = feature.get('containment');
+
+        if (feature.isTypeOf('EAttribute')) {
+          data[featureName] = value;
+        } else {
+          if (isMany) {
+            data[featureName] = [];
+            value.each((val: any) => {
+              data[featureName].push(processValue(object, val, isContainment));
+            });
+          } else {
+            data[featureName] = processValue(object, value, isContainment);
+          }
+        }
+      };
+    }
+
+    function processAnnotation(object: any, data: any) {
+      if (object.values.source) {
+        data.source = object.values.source;
+      }
+
+      if (object.values.details && object.values.details.size() > 0) {
+        data.details = {};
+        object.values.details.each((e: any) => {
+          const key = e.get('key');
+          const value = e.get('value');
+          if (key) {
+            data.details[key] = value;
+          }
+        });
+      }
+    }
+
+    function jsonObject(object: any) {
+      const eClass = object.eClass,
+        values = object.values,
+        data: any = { eClass: eClass.eURI() };
+
+      if (object._id) {
+        data._id = object._id;
+      }
+
+      if (eClass === EAnnotation) {
+        processAnnotation(object, data);
+      } else {
+        Object.entries(values).forEach(([key, value]) => {
+          const cb = processFeature(object, data);
+          cb(value, key);
+        });
+      }
+
+      return data;
+    }
+
+    let data;
+    if (contents.length === 1) {
+      const eObject = contents[0];
+      data = jsonObject(eObject);
+    } else {
+      data = [];
+      for (let i = 0; i < contents.length; i++) {
+        data.push(jsonObject(contents[i]));
+      }
+    }
+    return data;
+  },
 };
 
 // Resource
 
-var EClassResource = Ecore.Resource = Ecore.EClass.create({
-    name: 'Resource',
-    eSuperTypes: [
-        Ecore.EObject
-    ],
-    eStructuralFeatures: [
-        {
-            eClass: Ecore.EAttribute,
-            name: 'uri',
-            lowerBound: 1,
-            upperBound: 1,
-            eType: Ecore.EString
-        },
-        {
-            eClass: Ecore.EReference,
-            name: 'contents',
-            upperBound: -1,
-            containment: true,
-            eType: Ecore.EObject
-        },
-        {
-            eClass: Ecore.EReference,
-            name: 'resourceSet',
-            upperBound: 1,
-            lowerBound: 0,
-            eType: Ecore.ResourceSet
-        }
-    ],
-    eOperations: [
-        {
-            eClass: Ecore.EOperation,
-            name: 'add',
-            _: function(eObject) {
-                if (!eObject && !eObject.eClass) return this;
-
-                eObject.eContainer = this;
-                this.get('contents').add(eObject);
-
-                return this;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'clear',
-            _: function() {
-                this.get('contents').clear();
-                return this;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'addAll',
-            _: function(content) {
-                if (_.isArray(content)) {
-                    _.each(content, function(eObject) {
-                        this.add(eObject);
-                    }, this);
-                }
-
-                return this;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'getEObject',
-            eType: Ecore.EObject,
-            _: function(fragment) {
-                if (!fragment) return null;
-
-                if(this._index()[fragment]) {
-                    return this._index()[fragment];
-                }
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'each',
-            _: function(iterator, context) {
-                return this.get('contents').each(iterator, context);
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'to',
-            _: function(formatter, indent) {
-                if (formatter && typeof formatter.to === 'function')
-                    return formatter.to(this, indent);
-                else
-                    return Ecore.JSON.to(this);
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'parse',
-            _: function(data, loader) {
-                if (loader && typeof loader.parse === 'function')
-                    loader.parse(this, data);
-                else
-                    Ecore.JSON.parse(this, data);
-                return this;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'save',
-            _: function(callback, options) {
-                options || (options = {});
-
-                var formatter = options.format ? options.format : Ecore.JSON;
-                var data;
-                try {
-                    data = this.to(formatter);
-                } catch (e) {
-                    callback(null, e);
-                }
-
-                callback(data, null);
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'load',
-            _: function(data, callback, options) {
-                options || (options = {});
-
-                var loader = options.format || Ecore.JSON;
-                var resourceSet = this.get('resourceSet');
-
-                try {
-                    this.parse(data, loader);
-                } catch (e) {
-                    callback(null, e);
-                }
-
-                this.trigger('change');
-                if (typeof callback === 'function') {
-                    callback(this, null);
-                }
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'remove',
-            _: function() {
-                var resourceSet = this.get('resourceSet');
-                if (resourceSet) {
-                    resourceSet.get('resources').remove(this);
-                }
-                this.clear();
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: '_index',
-            eType: JSObject,
-            _: function() {
-                if (_.isUndefined(this.__updateIndex)) {
-                    var res = this;
-                    res.__updateIndex = true;
-                    res.on('add remove', function() {
-                        res.__updateIndex = true;
-                    })
-                }
-
-                if (this.__updateIndex) {
-                    this.__index = buildIndex(this);
-                    this.__updateIndex = false;
-                }
-
-                return this.__index;
-            }
-        }
-    ]
-});
-
-
-// URIConverter
-//
-
-var URIConverter = function() {
-    this.uriMap = {};
-};
-
-URIConverter.prototype = {
-
-    map: function(key, value) {
-        this.uriMap[key] = value;
+export const Resource = EClass.create({
+  name: 'Resource',
+  eSuperTypes: [EObject],
+  eStructuralFeatures: [
+    {
+      eClass: EAttribute,
+      name: 'uri',
+      lowerBound: 1,
+      upperBound: 1,
+      eType: EString,
     },
+    {
+      eClass: EReference,
+      name: 'contents',
+      upperBound: -1,
+      containment: true,
+      eType: EObject,
+    },
+    {
+      eClass: EReference,
+      name: 'resourceSet',
+      upperBound: 1,
+      lowerBound: 0,
+      eType: ResourceSet,
+    },
+  ],
+  eOperations: [
+    {
+      eClass: EOperation,
+      name: 'add',
+      _: function (eObject: any) {
+        if (!eObject && !eObject.eClass) return this;
 
-    normalize: function(uri) {
-        var split = uri.split('#'),
-          base = split[0],
-          normalized = this.uriMap[base];
+        eObject.eContainer = this;
+        (this as unknown as EObject).get('contents').add(eObject);
 
-        if (normalized) return normalized;
+        return this;
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'clear',
+      _: function () {
+        (this as unknown as EObject).get('contents').clear();
+        return this;
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'addAll',
+      _: function (content: any) {
+        if (Array.isArray(content)) {
+          content.forEach((eObject) => {
+            (this as unknown as any).add(eObject);
+          });
+        }
 
-        var slashIndex = base.lastIndexOf('/') + 1,
-          sliced, rest;
+        return this;
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'getEObject',
+      eType: EObject,
+      _: function (fragment: any) {
+        if (!fragment) return null;
 
-        sliced = base.slice(0, slashIndex);
+        if ((this as unknown as any)._index()[fragment]) {
+          return (this as unknown as any)._index()[fragment];
+        }
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'each',
+      _: function (iterator: any, context: any) {
+        return (this as unknown as EObject)
+          .get('contents')
+          .each(iterator, context);
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'to',
+      _: function (formatter: any, indent: any) {
+        if (formatter && typeof formatter.to === 'function')
+          return formatter.to(this, indent);
+        else return EJSON.to(this);
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'parse',
+      _: function (data: any, loader: any) {
+        if (loader && typeof loader.parse === 'function')
+          loader.parse(this, data);
+        else EJSON.parse(this, data);
+        return this;
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'save',
+      _: function (callback: any, options: any) {
+        options || (options = {});
 
-        if (sliced === base) return uri;
+        const formatter = options.format ? options.format : EJSON;
+        let data;
+        try {
+          data = (this as unknown as any).to(formatter);
+        } catch (e) {
+          callback(null, e);
+        }
 
-        rest = base.slice(slashIndex, base.length);
+        callback(data, null);
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'load',
+      _: function (data: any, callback: any, options: any) {
+        options || (options = {});
 
-        return this.normalize(sliced) + rest;
-    }
+        const loader = options.format || EJSON;
 
-};
+        try {
+          (this as unknown as any).parse(data, loader);
+        } catch (e) {
+          callback(null, e);
+        }
+
+        (this as unknown as EObject).trigger('change');
+        if (typeof callback === 'function') {
+          callback(this, null);
+        }
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'remove',
+      _: function () {
+        const resourceSet = (this as unknown as EObject).get('resourceSet');
+        if (resourceSet) {
+          resourceSet.get('resources').remove(this);
+        }
+        (this as unknown as any).clear();
+      },
+    },
+    {
+      eClass: EOperation,
+      name: '_index',
+      eType: JSObject,
+      _: function () {
+        if (isUndefined((this as unknown as any).__updateIndex)) {
+          (this as unknown as any).__updateIndex = true;
+          (this as unknown as any).on('add remove', () => {
+            (this as unknown as any).__updateIndex = true;
+          });
+        }
+
+        if ((this as unknown as any).__updateIndex) {
+          (this as unknown as any).__index = buildIndex(this);
+          (this as unknown as any).__updateIndex = false;
+        }
+
+        return (this as unknown as any).__index;
+      },
+    },
+  ],
+})! as EObject;
+
+const EClassResource = Resource;
+
+class URIConverter {
+  public uriMap: Record<any, any> = {};
+
+  map(key: any, value: any) {
+    this.uriMap[key] = value;
+  }
+
+  normalize(uri: any): any {
+    const split = uri.split('#'),
+      base = split[0],
+      normalized = this.uriMap[base];
+
+    if (normalized) return normalized;
+
+    let slashIndex = base.lastIndexOf('/') + 1,
+      sliced,
+      rest;
+
+    sliced = base.slice(0, slashIndex);
+
+    if (sliced === base) return uri;
+
+    rest = base.slice(slashIndex, base.length);
+
+    return this.normalize(sliced) + rest;
+  }
+}
 
 // ResourceSet
 //
 
-var EClassResourceSet = Ecore.ResourceSet = Ecore.EClass.create({
-    name: 'ResourceSet',
-    eSuperTypes: [
-        Ecore.EObject
-    ],
-    eStructuralFeatures: [
-        {
-            eClass: Ecore.EAttribute,
-            name: 'uri',
-            upperBound: 1,
-            lowerBound: 0,
-            eType: Ecore.EString
-        },
-        {
-            eClass: Ecore.EReference,
-            name: 'resources',
-            upperBound: -1,
-            containment: true,
-            eType: EClassResource
+ResourceSet = EClass.create({
+  name: 'ResourceSet',
+  eSuperTypes: [EObject],
+  eStructuralFeatures: [
+    {
+      eClass: EAttribute,
+      name: 'uri',
+      upperBound: 1,
+      lowerBound: 0,
+      eType: EString,
+    },
+    {
+      eClass: EReference,
+      name: 'resources',
+      upperBound: -1,
+      containment: true,
+      eType: EClassResource,
+    },
+  ],
+  eOperations: [
+    {
+      eClass: EOperation,
+      eType: Resource,
+      upperBound: 1,
+      name: 'create',
+      _: function (uri: any) {
+        const attrs: any = isObject(uri) ? uri : { uri: uri };
+
+        if (!attrs.uri) {
+          throw new Error('Cannot create Resource, missing URI parameter');
         }
-    ],
-    eOperations: [
-        {
-            eClass: Ecore.EOperation,
-            eType: Ecore.Resource,
-            upperBound: 1,
-            name: 'create',
-            _: function(uri) {
-                var attrs = _.isObject(uri) ? uri : { uri: uri };
 
-                if (!attrs.uri) {
-                    throw new Error('Cannot create Resource, missing URI parameter');
-                }
+        let resource = (this as unknown as EObject)
+          .get('resources')
+          .find((e: any) => e.get('uri') === attrs.uri);
 
-                var resource = this.get('resources').find(function(e) {
-                    return e.get('uri') === attrs.uri;
-                });
+        if (resource) return resource;
 
-                if (resource) return resource;
+        resource = Resource.create(attrs);
+        resource.set('resourceSet', this);
+        (this as unknown as EObject).get('resources').add(resource);
+        (this as unknown as EObject).trigger('add', resource);
 
-                resource = Ecore.Resource.create(attrs);
-                resource.set('resourceSet', this);
-                this.get('resources').add(resource);
-                this.trigger('add', resource);
+        return resource;
+      },
+    },
+    {
+      eClass: EOperation,
+      eType: EObject,
+      upperBound: 1,
+      name: 'getEObject',
+      _: function (uri: any) {
+        let split = uri.split('#'),
+          base = split[0],
+          fragment = split[1],
+          resource: any;
 
-                return resource;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            eType: Ecore.EObject,
-            upperBound: 1,
-            name: 'getEObject',
-            _: function(uri) {
-                var split = uri.split('#'),
-                  base = split[0],
-                  fragment = split[1],
-                  resource;
-
-                if (!fragment) {
-                    return null;
-                }
-
-                var ePackage = Ecore.EPackage.Registry.getEPackage(base);
-
-                if (ePackage) {
-
-                    resource = ePackage.eResource();
-
-                    if (!resource) {
-                        resource = this.create({ uri: base });
-                        resource.add(ePackage);
-                        this.get('resources').add(resource);
-                        resource.set('resourceSet', this);
-                    }
-                }
-
-                if (resource) {
-                    return resource.getEObject(fragment);
-                }
-
-                resource = this.get('resources').find(function(e) {
-                    return e.get('uri') === base;
-                });
-
-                return resource ? resource.getEObject(fragment) : null;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            eType: Ecore.EObject,
-            upperBound: -1,
-            name: 'elements',
-            _: function(type) {
-                var filter = function(el) {
-                    return !type ? true : el.isKindOf(type);
-                };
-                var contents = this.get('resources').map(function(m) {
-                    return _.filter(_.values(m._index()), filter);
-                });
-                return _.flatten(contents);
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            eType: Ecore.JSObject,
-            upperBound: 1,
-            name: 'uriConverter',
-            _: function() {
-                if (!this._converter) {
-                    this._converter = new URIConverter();
-                }
-
-                return this._converter;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            eType: Ecore.JSObject,
-            upperBound: 1,
-            name: 'toJSON',
-            _: function() {
-                var result = { total: this.get('resources').size(), resources: [] };
-
-                this.get('resources').each(function(resource) {
-                    result.resources.push({
-                        uri: resource.get('uri'),
-                        length: resource.get('contents').size(),
-                        contents: resource.get('contents').map(function(c) {
-                            return { eURI: c.eURI(), eClass: c.eClass.eURI() };
-                        })
-                    });
-                });
-
-                return result;
-            }
-        },
-        {
-            eClass: Ecore.EOperation,
-            name: 'parse',
-            _: function(data) {
-                if (!data || !data.resources) return;
-
-                _.each(data.resources, function(resource) {
-                    if (resource.uri) {
-                        resourceSet.create({ uri: resource.uri });
-                    }
-                }, this);
-            }
+        if (!fragment) {
+          return null;
         }
-    ]
-});
 
-EClassResource.getEStructuralFeature('resourceSet').set('eType', EClassResourceSet);
+        const ePackage = EPackage.Registry.getEPackage(base);
 
-var EPackageResource = Ecore.EPackage.create({
-    name: 'resources',
-    nsPrefix: 'resources',
-    nsURI: 'http://www.eclipselabs.org/ecore/2012/resources',
-    eClassifiers: [
-        EClassResourceSet,
-        EClassResource
-    ]
-});
+        if (ePackage) {
+          resource = ePackage.eResource();
 
-var EcoreResource = Ecore.Resource.create({ uri: Ecore.EcorePackage.get('nsURI') });
-EcoreResource.add(Ecore.EcorePackage);
-var ResourceResource = Ecore.Resource.create({ uri: EPackageResource.get('nsURI') });
-ResourceResource.add(EPackageResource);
+          if (!resource) {
+            resource = (this as unknown as EObject).create({ uri: base });
+            resource.add(ePackage);
+            (this as unknown as EObject).get('resources').add(resource);
+            resource.set('resourceSet', this);
+          }
+        }
 
-Ecore.EPackage.Registry.register(EPackageResource);
+        if (resource) {
+          return resource.getEObject(fragment);
+        }
 
-// Build index of EObjects contained in a Resource.
-//
-// The index keys are the EObject's fragment identifier, the
-// values are the EObjects.
-//
+        resource = (this as unknown as EObject)
+          .get('resources')
+          .find((e: any) => e.get('uri') === base);
 
-function buildIndex(model) {
-    var index = {},
-      contents = model.get('contents').array();
+        return resource ? resource.getEObject(fragment) : null;
+      },
+    },
+    {
+      eClass: EOperation,
+      eType: EObject,
+      upperBound: -1,
+      name: 'elements',
+      _: function (type: any) {
+        const filter = (el: any) => (!type ? true : el.isKindOf(type));
+        const contents = (this as unknown as EObject)
+          .get('resources')
+          .map((m: any) => values(m._index()).filter(filter));
+        return flatten(contents);
+      },
+    },
+    {
+      eClass: EOperation,
+      eType: JSObject,
+      upperBound: 1,
+      name: 'uriConverter',
+      _: function () {
+        if (!(this as unknown as any)._converter) {
+          (this as unknown as any)._converter = new URIConverter();
+        }
 
-    if (contents.length) {
-        var build = function(object, idx) {
-            var eContents = object.eContents();
-            index[idx] = object;
-
-            _.each(eContents, function(e) { build(e, e.fragment()); });
+        return (this as unknown as any)._converter;
+      },
+    },
+    {
+      eClass: EOperation,
+      eType: JSObject,
+      upperBound: 1,
+      name: 'toJSON',
+      _: function () {
+        const result: any = {
+          total: (this as unknown as EObject).get('resources').size(),
+          resources: [],
         };
 
-        var root, iD;
-        if (contents.length === 1) {
-            root = contents[0];
-            if (root._id) {
-                build(root, root._id);
-            } else {
-                iD = root.eClass.get('eIDAttribute') || null;
-                if (iD) {
-                    build(root, root.get(iD.get('name')));
-                } else {
-                    build(root, '/');
-                }
+        (this as unknown as EObject).get('resources').each((resource: any) => {
+          result.resources.push({
+            uri: resource.get('uri'),
+            length: resource.get('contents').size(),
+            contents: resource.get('contents').map((c: any) => {
+              return { eURI: c.eURI(), eClass: c.eClass.eURI() };
+            }),
+          });
+        });
+
+        return result;
+      },
+    },
+    {
+      eClass: EOperation,
+      name: 'parse',
+      _: function (data: any) {
+        if (!data || !data.resources) return;
+
+        data.resources.forEach((resource: any) => {
+          if (resource.uri) {
+            const resourceSet = (this as unknown as any).get('resourceSet');
+            if (resourceSet) {
+              resourceSet.create({ uri: resource.uri });
             }
+          }
+        });
+      },
+    },
+  ],
+})!;
+
+const EClassResourceSet = ResourceSet;
+
+EClassResource.getEStructuralFeature('resourceSet').set(
+  'eType',
+  EClassResourceSet,
+);
+
+const EPackageResource = EPackage.create({
+  name: 'resources',
+  nsPrefix: 'resources',
+  nsURI: 'http://www.eclipselabs.org/ecore/2012/resources',
+  eClassifiers: [EClassResourceSet, EClassResource],
+})!;
+
+const EcoreResource = Resource.create({ uri: EcorePackage.get('nsURI') })!;
+(EcoreResource as unknown as any).add(EcorePackage);
+const ResourceResource = Resource.create({
+  uri: EPackageResource.get('nsURI'),
+})!;
+(ResourceResource as unknown as any).add(EPackageResource);
+
+EPackage.Registry.register(EPackageResource);
+
+function buildIndex(model: any) {
+  const index: any = {},
+    contents = model.get('contents').array();
+
+  if (contents.length) {
+    const build = (object: any, idx: any) => {
+      const eContents = object.eContents();
+      index[idx] = object;
+
+      eContents.forEach((e: any) => {
+        build(e, e.fragment());
+      });
+    };
+
+    let root, iD;
+    if (contents.length === 1) {
+      root = contents[0];
+      if (root._id) {
+        build(root, root._id);
+      } else {
+        iD = root.eClass.get('eIDAttribute') || null;
+        if (iD) {
+          build(root, root.get(iD.get('name')));
         } else {
-            for (var i = 0; i < contents.length; i++) {
-                root = contents[i];
-                if (root._id) {
-                    build(root, root._id);
-                } else {
-                    iD = root.eClass.get('eIDAttribute') || null;
-                    if (iD) {
-                        build(root, root.get(iD.get('name')));
-                    } else {
-                        build(root, '/' + i);
-                    }
-                }
-            }
+          build(root, '/');
         }
+      }
+    } else {
+      for (let i = 0; i < contents.length; i++) {
+        root = contents[i];
+        if (root._id) {
+          build(root, root._id);
+        } else {
+          iD = root.eClass.get('eIDAttribute') || null;
+          if (iD) {
+            build(root, root.get(iD.get('name')));
+          } else {
+            build(root, '/' + i);
+          }
+        }
+      }
     }
+  }
 
-    return index;
+  return index;
 }
-

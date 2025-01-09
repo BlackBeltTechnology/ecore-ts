@@ -1,11 +1,7 @@
-import path from 'node:path';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '',
-  resolve: {
-    alias: [
-      { find: '~', replacement: path.resolve(__dirname, 'src') },
-    ],
-  },
+  build: { sourcemap: true, lib: { entry: resolve(__dirname, 'src/main.ts'), formats: ['es'] } },
+  resolve: { alias: { src: resolve('src/') } },
 })

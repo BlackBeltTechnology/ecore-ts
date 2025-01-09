@@ -1,2 +1,3 @@
-module.exports = require("./dist/ecore");
-
+export * from './ecore';
+export * from './resource';
+export * from './xmi';
