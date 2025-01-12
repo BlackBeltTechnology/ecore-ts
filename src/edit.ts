@@ -1,11 +1,11 @@
 import { union, flatten } from 'lodash-es';
 import { EOperation } from './ecore.ts';
 
-function isNotAbstract(type: any) {
+function isNotAbstract(type: any): boolean {
   return !type.get('abstract');
 }
 
-function getSubTypes(type: any) {
+function getSubTypes(type: any): any[] {
   if (!type || !type.eClass) return [];
 
   const allSubTypes = type.get('eAllSubTypes');
@@ -13,7 +13,7 @@ function getSubTypes(type: any) {
   return union([type], allSubTypes).filter(isNotAbstract);
 }
 
-function childTypes(object: any, createDescriptor: any) {
+function childTypes(object: any, createDescriptor?: any): any[] {
   if (!object) return [];
 
   const allContainments = object.eClass.get('eAllContainments');
@@ -30,7 +30,7 @@ function childTypes(object: any, createDescriptor: any) {
   return flatten(allContainments.map(allSubTypes));
 }
 
-function siblingTypes(object: any, createDescriptor: any) {
+function siblingTypes(object: any, createDescriptor?: any): any[] {
   if (!object) return [];
 
   const eContainer = object.eContainer;
@@ -39,7 +39,7 @@ function siblingTypes(object: any, createDescriptor: any) {
   return siblings;
 }
 
-function createDescriptor(object: any, feature: any, types: any) {
+function createDescriptor(object: any, feature: any, types: any[]): any[] {
   return types.map((type: any) => ({
     label: 'New ' + type.get('name'),
     owner: object,
@@ -48,19 +48,19 @@ function createDescriptor(object: any, feature: any, types: any) {
   }));
 }
 
-function childDescriptors(object: any) {
+function childDescriptors(object: any): any[] {
   return childTypes(object, createDescriptor);
 }
 
-function siblingDescriptors(object: any) {
+function siblingDescriptors(object: any): any[] {
   return siblingTypes(object, createDescriptor);
 }
 
-function textNamedElement(object: any) {
+function textNamedElement(object: any): string {
   return object.get('name') || '';
 }
 
-function textTypedElement(object: any) {
+function textTypedElement(object: any): string {
   const type = object.get('eType');
   const isOp = object.eClass === EOperation;
   const typeName = type ? type.get('name') : null;
@@ -70,7 +70,7 @@ function textTypedElement(object: any) {
   );
 }
 
-function choiceOfValues(owner: any, feature: any) {
+function choiceOfValues(owner: any, feature: any): any[] {
   if (
     owner == null ||
     owner.eResource() == null ||

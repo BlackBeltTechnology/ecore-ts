@@ -1,13 +1,4 @@
-import {
-  first,
-  flatten,
-  has,
-  isObject,
-  isUndefined,
-  last,
-  union,
-  without,
-} from 'lodash-es';
+import { has, isObject, without } from 'lodash-es';
 
 export function create(eClass: any, attributes?: any): EObject {
   let attrs: any, eObject;
@@ -149,10 +140,12 @@ export class EObject {
     function eAllOperations(eClass: any): EObject[] {
       const eOperations = eClass.get('eOperations').array();
       const superTypes = eClass.get('eAllSuperTypes');
-      return flatten(
-        union(
-          eOperations || [],
-          (superTypes || []).map((s: any): any => eAllOperations(s)),
+      return Array.from(
+        new Set(
+          [
+            eOperations || [],
+            (superTypes || []).map((s: any): any => eAllOperations(s)).flat(),
+          ].flat(),
         ),
       );
     }
@@ -331,7 +324,7 @@ export class EObject {
   eContents() {
     if (!this.eClass) return [];
 
-    if (isUndefined(this.__updateContents)) {
+    if (this.__updateContents === undefined) {
       this.__updateContents = true;
 
       const resource = this.eResource();
@@ -353,12 +346,12 @@ export class EObject {
       }, this);
 
       let value = null;
-      this.__eContents = flatten(
-        eContainments.map((c: any) => {
+      this.__eContents = eContainments
+        .map((c: any) => {
           value = this.get(c.get('name'));
           return value ? (value.array ? value.array() : value) : [];
-        }),
-      );
+        })
+        .flat();
 
       this.__updateContents = false;
     }
@@ -576,7 +569,7 @@ export class EList {
   }
 
   addAll() {
-    flatten(arguments || []).forEach((value) => {
+    ((arguments as unknown as any[]) || []).flat().forEach((value) => {
       this.add(value);
     });
 
@@ -620,11 +613,11 @@ export class EList {
   }
 
   first() {
-    return first(this._internal);
+    return this._internal[0];
   }
 
   last() {
-    return last(this._internal);
+    return this._internal[this._internal.length - 1];
   }
 
   each(iterator: any) {
@@ -685,11 +678,11 @@ EClass.values = {
     if (!this._eAllSuperTypes) {
       const compute = (eClass: any) => {
         const superTypes = eClass.get('eSuperTypes').array(),
-          eAllSuperTypes = flatten(
-            superTypes.map((s: any) => s.get('eAllSuperTypes')),
-          );
+          eAllSuperTypes = superTypes
+            .map((s: any) => s.get('eAllSuperTypes'))
+            .flat();
 
-        return union(eAllSuperTypes, superTypes);
+        return Array.from(new Set([eAllSuperTypes, superTypes].flat()));
       };
 
       this.on('add:eSuperTypes remove:eSuperTypes', () => {
@@ -748,13 +741,13 @@ EClass.values = {
       let eSuperFeatures, eAllFeatures, eSuperTypes;
       eSuperTypes = eClass.get('eAllSuperTypes');
       eAllFeatures = eClass.values.eStructuralFeatures.array();
-      eSuperFeatures = flatten(
-        (eSuperTypes || []).map((s: any) =>
-          s.values.eStructuralFeatures.array(),
-        ),
-      );
+      eSuperFeatures = (eSuperTypes || [])
+        .map((s: any) => s.values.eStructuralFeatures.array())
+        .flat();
 
-      return union(eSuperFeatures || [], eAllFeatures || []);
+      return Array.from(
+        new Set([eSuperFeatures || [], eAllFeatures || []].flat()),
+      );
     };
 
     return compute(this);
@@ -1588,7 +1581,7 @@ EPackage.Registry = {
     };
     const map = (p: any) => content(p);
     let contents = [ePackages, ePackages.map(map)];
-    contents = flatten(contents);
+    contents = contents.flat(Infinity);
     contents = contents.filter(filter);
 
     return contents;
