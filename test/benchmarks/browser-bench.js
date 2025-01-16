@@ -1,4 +1,7 @@
-var data = {
+import { Resource } from '../../dist/ecore.js';
+import { bench } from './bench.js';
+
+let data = {
   model: {
     eClass: 'http://www.eclipse.org/emf/2002/Ecore#//EPackage',
     name: 'example',
@@ -28,15 +31,15 @@ var data = {
   },
 };
 
-var main = function () {
+let main = () => {
   console.log('start benchmark');
 
-  var model = Ecore.Resource.create({ uri: 'simple' });
-  var onSuccess = function (result) {};
-  var onError = function () {};
-  var input = { data: data.model };
+  let model = Resource.create({ uri: 'simple' });
+  let onSuccess = (result) => {};
+  let onError = () => {};
+  let input = { data: data.model };
 
-  Bench.bench(model.load, 1, [onSuccess, onError, input], model);
+  bench(model.load, 1, [onSuccess, onError, input], model);
 };
 
 window.onload = main;

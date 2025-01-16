@@ -1,38 +1,37 @@
-fs = require('fs');
-var Ecore = require('../../dist/ecore.js');
-var Bench = require('./bench.js');
-var assert = require('assert');
+import fs from 'node:fs';
+import { Resource, XMI } from '../../dist/ecore.js';
+import { bench } from './bench.js';
 
-var model = Ecore.Resource.create({ uri: 'simple' });
-var onSuccess = function (result) {};
-var onError = function () {};
+let model = Resource.create({ uri: 'simple' });
+let onSuccess = (result) => {};
+let onError = () => {};
 
-fs.readFile('../models/simple.json', 'utf8', function (err, data) {
+fs.readFile('../models/simple.json', 'utf8', (err, data) => {
   if (err) {
     return console.log(err);
   }
 
-  var input = { data: JSON.parse(data) };
+  let input = { data: JSON.parse(data) };
 
-  Bench.bench(model.load, 20, [onSuccess, onError, input], model);
+  bench(model.load, 20, [onSuccess, onError, input], model);
 });
 
-fs.readFile('../models/test1.xmi', 'utf8', function (err, data) {
+fs.readFile('../models/test1.xmi', 'utf8', (err, data) => {
   if (err) {
     return console.log(err);
   }
 
-  var input = { data: data, format: Ecore.XMI };
+  let input = { data: data, format: XMI };
 
-  Bench.bench(model.load, 20, [onSuccess, onError, input], model);
+  bench(model.load, 20, [onSuccess, onError, input], model);
 });
 
-fs.readFile('../models/test2.xmi', 'utf8', function (err, data) {
+fs.readFile('../models/test2.xmi', 'utf8', (err, data) => {
   if (err) {
     return console.log(err);
   }
 
-  var input = { data: data, format: Ecore.XMI };
+  let input = { data: data, format: XMI };
 
-  Bench.bench(model.load, 20, [onSuccess, onError, input], model);
+  bench(model.load, 20, [onSuccess, onError, input], model);
 });

@@ -1,6 +1,3 @@
-var root = this;
-var Bench = {};
-
 /**
  * Figure out how long it takes for a method to execute.
  *
@@ -10,15 +7,15 @@ var Bench = {};
  * @param {T} context the context to call the method in.
  * @return {int} the time it took, in milliseconds to execute.
  */
-Bench.bench = function (method, iterations, args, context) {
-  var time = 0;
-  var timer = function (action) {
-    var d = +new Date();
+export const bench = (method, iterations, args, context) => {
+  let time = 0;
+  let timer = (action) => {
+    let d = +new Date();
     if (time < 1 || action === 'start') {
       time = d;
       return 0;
     } else if (action === 'stop') {
-      var t = d - time;
+      let t = d - time;
       time = 0;
       return t;
     } else {
@@ -26,15 +23,15 @@ Bench.bench = function (method, iterations, args, context) {
     }
   };
 
-  var result = [];
-  var i = 0;
+  let result = [];
+  let i = 0;
   timer('start');
   while (i < iterations) {
     result.push(method.apply(context, args));
     i++;
   }
 
-  var execTime = timer('stop');
+  let execTime = timer('stop');
 
   if (typeof console === 'object') {
     console.log('Mean execution time was: ', execTime / iterations);
@@ -44,12 +41,3 @@ Bench.bench = function (method, iterations, args, context) {
 
   return execTime;
 };
-
-if (typeof exports !== 'undefined') {
-  if (typeof module !== 'undefined' && module.exports) {
-    exports = module.exports = Bench;
-  }
-  exports.Bench = Bench;
-} else {
-  root.Bench = Bench;
-}

@@ -52,10 +52,6 @@ describe('Events', () => {
     });
   });
 
-  describe('#off', () => {});
-
-  describe('#trigger', () => {});
-
   describe('#set', () => {
     it('should trigger a change event after setting a property', () => {
       let Test = EClass.create({ name: 'Test' })!;
