@@ -8,8 +8,10 @@ import {
   EcorePackage,
   EDataType,
   EGenericType,
+  EList,
   EModelElement,
   ENamedElement,
+  EObject,
   EOperation,
   EPackage,
   EParameter,
@@ -41,10 +43,12 @@ describe('Ecore', () => {
     });
 
     it('should have eAnnotations feature', () => {
-      expect(EModelElement.get('eStructuralFeatures').size()).toBe(1);
+      expect(EModelElement.get<EList>('eStructuralFeatures')!.size()).toBe(1);
 
-      let eAnnotations = EModelElement.get('eStructuralFeatures').at(0);
-      expect(eAnnotations.get('name')).toBe('eAnnotations');
+      let eAnnotations = EModelElement.get<EList>(
+        'eStructuralFeatures',
+      )!.at<EObject>(0);
+      expect(eAnnotations.get<string>('name')).toBe('eAnnotations');
       expect(eAnnotations.eClass).toBe(EReference);
       expect(eAnnotations.get('lowerBound')).toBe(0);
       expect(eAnnotations.get('upperBound')).toBe(-1);
@@ -59,17 +63,17 @@ describe('Ecore', () => {
     });
 
     it('should have source and details attributes', () => {
-      let features = EAnnotation.get('eStructuralFeatures');
+      let features = EAnnotation.get<EList>('eStructuralFeatures')!;
       expect(features.size()).toBe(2);
 
-      let source = features.at(0);
+      let source = features.at<EObject>(0);
       expect(source.get('name')).toBe('source');
       expect(source.get('lowerBound')).toBe(0);
       expect(source.get('upperBound')).toBe(1);
       expect(EAttribute).toEqual(source.eClass);
       expect(source.get('eType')).toBe(EString);
 
-      let details = features.at(1);
+      let details = features.at<EObject>(1);
       expect(details.get('name')).toBe('details');
       expect(details.get('lowerBound')).toBe(0);
       expect(details.get('upperBound')).toBe(-1);
@@ -371,17 +375,17 @@ describe('Ecore', () => {
 
   describe('#EModelElement', () => {
     it('should have correct attributes', () => {
-      expect(true).toBe(EModelElement.get('abstract'));
-      expect(1).toBe(EModelElement.get('eSuperTypes').size());
+      expect(true).toBe(EModelElement.get<boolean>('abstract'));
+      expect(1).toBe(EModelElement.get<EList>('eSuperTypes')!.size());
     });
   }); // end describe EModelElement
 
   describe('#ENamedElement', () => {
     it('should have correct attributes', () => {
       expect(true).toBe(ENamedElement.get('abstract'));
-      expect(1).toBe(ENamedElement.get('eSuperTypes').size());
+      expect(1).toBe(ENamedElement.get<EList>('eSuperTypes')!.size());
 
-      let superType = ENamedElement.get('eSuperTypes').first();
+      let superType = ENamedElement.get<EList>('eSuperTypes')!.first();
 
       expect(superType).toEqual(EModelElement);
     });
@@ -390,13 +394,13 @@ describe('Ecore', () => {
   describe('#ETypedElement', () => {
     it('should have correct attributes', () => {
       expect(true).toBe(ETypedElement.get('abstract'));
-      expect(1).toBe(ETypedElement.get('eSuperTypes').size());
+      expect(1).toBe(ETypedElement.get<EList>('eSuperTypes')!.size());
 
-      let superType = ETypedElement.get('eSuperTypes').first();
+      let superType = ETypedElement.get<EList>('eSuperTypes')!.first();
 
       expect(superType).toEqual(ENamedElement);
 
-      let allSuperTypes = ETypedElement.get('eAllSuperTypes');
+      let allSuperTypes = ETypedElement.get<EList>('eAllSuperTypes')!;
 
       expect(3).toBe(allSuperTypes.length);
       expect(allSuperTypes.includes(ENamedElement)).toBe(true);
@@ -415,7 +419,7 @@ describe('Ecore', () => {
   describe('#EClassifier', () => {
     it('should have correct attributes', () => {
       expect(true).toBe(EClassifier.get('abstract'));
-      expect(1).toBe(EClassifier.get('eSuperTypes').size());
+      expect(1).toBe(EClassifier.get<EList>('eSuperTypes')!.size());
     });
 
     it('should have correct features', () => {
@@ -473,7 +477,7 @@ describe('Ecore', () => {
     });
 
     it('should have EClassifier has eSuperTypes', () => {
-      let found = EClass.get('eSuperTypes').find((type: any) => {
+      let found = EClass.get<EList>('eSuperTypes')!.find((type) => {
         return type === EClassifier;
       });
 
@@ -484,15 +488,15 @@ describe('Ecore', () => {
 
   describe('ETypeParameter', () => {
     it('should have correct attributes', () => {
-      expect(0).toEqual(ETypeParameter.get('eAttributes').length);
-      expect(1).toEqual(ETypeParameter.get('eSuperTypes').size());
-      expect(ETypeParameter.get('eSuperTypes').contains(ENamedElement)).toBe(
-        true,
-      );
+      expect(0).toEqual(ETypeParameter.get<EList>('eAttributes')!.length);
+      expect(1).toEqual(ETypeParameter.get<EList>('eSuperTypes')!.size());
+      expect(
+        ETypeParameter.get<EList>('eSuperTypes')!.contains(ENamedElement),
+      ).toBe(true);
     });
 
     it('should have correct references', () => {
-      let eReferences = ETypeParameter.get('eReferences');
+      let eReferences = ETypeParameter.get<EList>('eReferences')!;
 
       expect(2).toEqual(eReferences.length);
 
@@ -510,12 +514,12 @@ describe('Ecore', () => {
 
   describe('EGenericType', () => {
     it('should have correct attributes', () => {
-      expect(0).toEqual(EGenericType.get('eAttributes').length);
-      expect(1).toEqual(EGenericType.get('eSuperTypes').size());
+      expect(0).toEqual(EGenericType.get<EList>('eAttributes')!.length);
+      expect(1).toEqual(EGenericType.get<EList>('eSuperTypes')!.size());
     });
 
     it('should have correct references', () => {
-      expect(5).toEqual(EGenericType.get('eReferences').length);
+      expect(5).toEqual(EGenericType.get<EList>('eReferences')!.length);
 
       let eUpperBound = EGenericType.getEStructuralFeature('eUpperBound');
       expect(EGenericType).toEqual(eUpperBound.get('eType'));

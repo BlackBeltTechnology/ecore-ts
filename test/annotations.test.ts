@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import { it, describe, expect } from 'vitest';
-import { EJSON, ResourceSet } from '../src/resource';
+import { EJSON, EResource, ResourceSet } from '../src/resource';
+import { EList, EObject } from '../src/ecore';
 
 describe('Annotations', () => {
   it('should read an ecore file containing annotations', () => {
-    let resourceSet = ResourceSet!.create()!;
-    let model = resourceSet.create({ uri: 'http://www.example.org/example' })!;
+    let resourceSet = ResourceSet.create()!;
+    let model = resourceSet.create<EResource>({
+      uri: 'http://www.example.org/example',
+    })!;
 
     fs.readFile('./test/models/annotations.json', 'utf8', (err, data) => {
       if (err) {
@@ -13,27 +16,30 @@ describe('Annotations', () => {
         return;
       }
 
-      (model as unknown as any).load(
+      model.load(
         data,
-        (model: any, err: any) => {
+        (model: EResource, err: any) => {
           if (err) {
             console.log(err);
             return;
           }
 
-          let pp = model.get('contents').at(0);
-          let fooClass = pp.get('eClassifiers').at(0);
+          let pp = model.get<EList>('contents')!.at<EObject>(0);
+          let fooClass = pp.get<EList>('eClassifiers')!.at<EObject>(0);
 
           expect(fooClass).toBeDefined();
-          expect(fooClass.get('eAnnotations').size()).toBe(1);
+          expect(fooClass.get<EList>('eAnnotations')!.size()).toBe(1);
 
-          let details = fooClass.get('eAnnotations').at(0).get('details');
+          let details = fooClass
+            .get<EList>('eAnnotations')!
+            .at<EObject>(0)
+            .get<EList>('details')!;
 
-          expect(details.at(0).get('key')).toBe('displayName');
-          expect(details.at(0).get('value')).toBe('value');
+          expect(details.at<EObject>(0).get('key')).toBe('displayName');
+          expect(details.at<EObject>(0).get('value')).toBe('value');
 
-          expect(details.at(1).get('key')).toBe('otherName');
-          expect(details.at(1).get('value')).toBe('otherValue');
+          expect(details.at<EObject>(1).get('key')).toBe('otherName');
+          expect(details.at<EObject>(1).get('value')).toBe('otherValue');
         },
         { format: JSON },
       );
@@ -41,16 +47,18 @@ describe('Annotations', () => {
   });
 
   it('should write annotations as object', () => {
-    let resourceSet = ResourceSet!.create()!;
-    let model = resourceSet.create({ uri: 'http://www.example.org/example' })!;
+    let resourceSet = ResourceSet.create()!;
+    let model = resourceSet.create<EResource>({
+      uri: 'http://www.example.org/example',
+    })!;
 
     fs.readFile(
       './test/models/annotations.json',
       'utf8',
       (_: any, data: any) => {
-        (model as unknown as any).load(
+        model.load(
           data,
-          (model: any, _: any) => {
+          (model: EResource, _: any) => {
             let result = EJSON.to(model);
 
             expect(

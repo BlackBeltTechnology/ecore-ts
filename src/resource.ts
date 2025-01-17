@@ -18,42 +18,45 @@ import {
   EcorePackage,
   JSObject,
   create,
+  EList,
 } from './ecore.ts';
 import { XMI } from './xmi.ts';
 
-export let ResourceSet: EObject | undefined;
+export let ResourceSet: EResourceSet;
 
 export const EJSON = {
   dataType: 'json',
   contentType: 'application/json',
 
-  parse(model: any, data: any) {
+  parse(model: EResource, data: any) {
     if (isString(data)) {
       data = JSON.parse(data);
     }
 
     const toResolve: any[] = [],
-      resourceSet = model.get('resourceSet') || ResourceSet!.create();
+      resourceSet =
+        model.get<EResourceSet>('resourceSet')! ||
+        ResourceSet!.create<EResourceSet>();
 
-    function processFeature(object: any, eObject: any) {
+    function processFeature(object: any, eObject: EObject) {
       if (!object || !eObject) return () => {};
 
-      return (feature: any) => {
+      return (feature: EObject) => {
         if (!feature || feature.get('derived')) return;
 
-        const featureName = feature.get('name'),
+        const featureName = feature.get<string>('name')!,
           value = object[featureName];
 
         if (typeof value !== 'undefined') {
           if (feature.isTypeOf('EAttribute')) {
             eObject.set(featureName, value);
           } else if (feature.get('containment')) {
-            const eType = feature.get('eType');
+            const eType = feature.get<EObject>('eType')!;
             if (feature.get('upperBound') === 1) {
               eObject.set(featureName, parseObject(value, eType));
             } else {
               (value || []).forEach((val: any) => {
-                eObject.get(featureName).add(parseObject(val, eType));
+                eObject.get<EList>(featureName)!.add(parseObject(val, eType));
               });
             }
           } else {
@@ -63,7 +66,7 @@ export const EJSON = {
       };
     }
 
-    function processAnnotation(node: any, eObject: any) {
+    function processAnnotation(node: any, eObject: EObject) {
       if (node.source) {
         eObject.set('source', node.source);
       }
@@ -71,7 +74,7 @@ export const EJSON = {
       if (node.details) {
         if (Array.isArray(node.details)) {
         } else {
-          const details = eObject.get('details');
+          const details = eObject.get<EList>('details')!;
           Object.entries(node.details).forEach(([k, v]) => {
             details.add(EStringToStringMapEntry.create({ key: k, value: v }));
           });
@@ -119,12 +122,12 @@ export const EJSON = {
       });
     }
 
-    function parseObject(object: any, eClass?: EObject) {
-      let child;
+    function parseObject(object: any, eClass?: EObject): EObject | undefined {
+      let child: EObject | undefined;
 
       if (object && (eClass || object.eClass)) {
         if (object.eClass) {
-          eClass = resourceSet.getEObject(object.eClass);
+          eClass = resourceSet.getEObject(object.eClass)!;
         }
 
         try {
@@ -145,7 +148,7 @@ export const EJSON = {
             processAnnotation(object, child);
           } else {
             eClass!
-              .get('eAllStructuralFeatures')
+              .get<EList>('eAllStructuralFeatures')!
               .forEach(processFeature(object, child));
           }
         }
@@ -156,10 +159,10 @@ export const EJSON = {
 
     if (Array.isArray(data)) {
       data.forEach((object) => {
-        model.add(parseObject(object));
+        model.add(parseObject(object)!);
       });
     } else {
-      model.add(parseObject(data));
+      model.add(parseObject(data)!);
     }
 
     resolveReferences();
@@ -170,17 +173,17 @@ export const EJSON = {
       indexes: any = {};
     indexes[model.get('uri')] = buildIndex(model);
 
-    function uri(owner: any, value: any) {
+    function uri(owner: EObject, value: EObject) {
       const valueModel = value.eResource(),
         ownerModel = owner.eResource(),
         external = valueModel !== ownerModel;
 
       if (!valueModel || !ownerModel) return;
-      if (!indexes[valueModel.get('uri')]) {
-        indexes[valueModel.get('uri')] = buildIndex(valueModel);
+      if (!indexes[valueModel.get<string>('uri')!]) {
+        indexes[valueModel.get<string>('uri')!] = buildIndex(valueModel);
       }
 
-      const index = indexes[valueModel.get('uri')];
+      const index = indexes[valueModel.get<string>('uri')!];
       for (const key in index) {
         if (index[key] === value) {
           return external ? valueModel.get('uri') + '#' + key : key;
@@ -190,7 +193,11 @@ export const EJSON = {
       return null;
     }
 
-    function processValue(object: any, value: any, isContainment: any) {
+    function processValue(
+      object: EObject,
+      value: EObject,
+      isContainment?: boolean,
+    ) {
       if (isContainment === true) {
         return jsonObject(value);
       } else {
@@ -198,7 +205,7 @@ export const EJSON = {
       }
     }
 
-    function processFeature(object: any, data: any) {
+    function processFeature(object: EObject, data: Record<any, any>) {
       if (!object || !data) return () => {};
 
       return (num: any, key: any) => {
@@ -228,7 +235,7 @@ export const EJSON = {
       };
     }
 
-    function processAnnotation(object: any, data: any) {
+    function processAnnotation(object: EObject, data: Record<any, any>) {
       if (object.values.source) {
         data.source = object.values.source;
       }
@@ -245,7 +252,7 @@ export const EJSON = {
       }
     }
 
-    function jsonObject(object: any) {
+    function jsonObject(object: EObject) {
       const eClass = object.eClass,
         values = object.values,
         data: any = { eClass: eClass.eURI() };
@@ -282,7 +289,29 @@ export const EJSON = {
 
 // Resource
 
-export const Resource = EClass.create({
+export interface EResource extends EObject {
+  uri: string;
+  contents: EObject[];
+  resourceSet?: typeof ResourceSet;
+  add: (eObject: EObject) => EResource;
+  addAll: (eObject: EObject[]) => EResource;
+  clear: () => EResource;
+  getEObject: (fragment: any) => EObject;
+  each: (iterator: Function, context: any) => any;
+  to: (formatter: { to: Function } | unknown, indent?: boolean) => any;
+  parse: (
+    data: any,
+    loader: { parse: (eObject: EObject, data: any) => void },
+  ) => EResource;
+  save: (callback: Function, options: Record<any, any>) => void;
+  load: (data: any, callback: Function, options?: Record<any, any>) => void;
+  remove: () => void;
+  _index: () => any;
+  __index: number;
+  __updateIndex: number;
+}
+
+export const Resource = EClass.create<EResource>({
   name: 'Resource',
   eSuperTypes: [EObject],
   eStructuralFeatures: [
@@ -305,6 +334,7 @@ export const Resource = EClass.create({
       name: 'resourceSet',
       upperBound: 1,
       lowerBound: 0,
+      // @ts-ignore
       eType: ResourceSet,
     },
   ],
@@ -312,11 +342,11 @@ export const Resource = EClass.create({
     {
       eClass: EOperation,
       name: 'add',
-      _: function (eObject: any) {
-        if (!eObject && !eObject.eClass) return this;
+      _: function (eObject: EObject) {
+        if (!eObject && !(eObject as EObject).eClass) return this;
 
         eObject.eContainer = this;
-        (this as unknown as EObject).get('contents').add(eObject);
+        (this as EObject).get<EList>('contents')!.add(eObject);
 
         return this;
       },
@@ -325,17 +355,17 @@ export const Resource = EClass.create({
       eClass: EOperation,
       name: 'clear',
       _: function () {
-        (this as unknown as EObject).get('contents').clear();
+        (this as EObject).get<EList>('contents')!.clear();
         return this;
       },
     },
     {
       eClass: EOperation,
       name: 'addAll',
-      _: function (content: any) {
+      _: function (content: EObject[] | unknown) {
         if (Array.isArray(content)) {
           content.forEach((eObject) => {
-            (this as unknown as any).add(eObject);
+            (this as any).add(eObject);
           });
         }
 
@@ -349,36 +379,37 @@ export const Resource = EClass.create({
       _: function (fragment: any) {
         if (!fragment) return null;
 
-        if ((this as unknown as any)._index()[fragment]) {
-          return (this as unknown as any)._index()[fragment];
+        if ((this as any)._index()[fragment]) {
+          return (this as any)._index()[fragment];
         }
       },
     },
     {
       eClass: EOperation,
       name: 'each',
-      _: function (iterator: any, context: any) {
-        return (this as unknown as EObject)
-          .get('contents')
-          .each(iterator, context);
+      _: function (iterator: any) {
+        return (this as EObject).get<EList>('contents')!.each(iterator);
       },
     },
     {
       eClass: EOperation,
       name: 'to',
-      _: function (formatter: any, indent: any) {
-        if (formatter && typeof formatter.to === 'function')
-          return formatter.to(this, indent);
+      _: function (formatter: { to: Function } | unknown, indent?: boolean) {
+        if (formatter && typeof (formatter as any).to === 'function')
+          return (formatter as any).to(this, indent);
         else return EJSON.to(this);
       },
     },
     {
       eClass: EOperation,
       name: 'parse',
-      _: function (data: any, loader: any) {
-        if (loader && loader === XMI) loader.parse(this, data);
-        else if (loader && loader !== EJSON)
-          EJSON.parse(this, loader.parse(data));
+      _: function (
+        data: any,
+        loader: { parse: (eObject: EObject, data: any) => void },
+      ) {
+        if (loader && (loader as any) === XMI) loader.parse(this, data);
+        else if (loader && (loader as any) !== EJSON)
+          EJSON.parse(this, (loader as any).parse(data));
         else EJSON.parse(this, data);
         return this;
       },
@@ -386,13 +417,13 @@ export const Resource = EClass.create({
     {
       eClass: EOperation,
       name: 'save',
-      _: function (callback: any, options: any) {
+      _: function (callback: Function, options: Record<any, any>) {
         options || (options = {});
 
         const formatter = options.format ? options.format : EJSON;
         let data;
         try {
-          data = (this as unknown as any).to(formatter);
+          data = (this as any).to(formatter);
         } catch (e) {
           callback(null, e);
         }
@@ -403,18 +434,18 @@ export const Resource = EClass.create({
     {
       eClass: EOperation,
       name: 'load',
-      _: function (data: any, callback: any, options: any) {
+      _: function (data: any, callback: Function, options: Record<any, any>) {
         options || (options = {});
 
         const loader = options.format || EJSON;
 
         try {
-          (this as unknown as any).parse(data, loader);
+          (this as any).parse(data, loader);
         } catch (e) {
           callback(null, e);
         }
 
-        (this as unknown as EObject).trigger('change');
+        (this as EObject).trigger('change');
         if (typeof callback === 'function') {
           callback(this, null);
         }
@@ -424,11 +455,11 @@ export const Resource = EClass.create({
       eClass: EOperation,
       name: 'remove',
       _: function () {
-        const resourceSet = (this as unknown as EObject).get('resourceSet');
+        const resourceSet = (this as EObject).get<EObject>('resourceSet')!;
         if (resourceSet) {
-          resourceSet.get('resources').remove(this);
+          resourceSet.get<EList>('resources')!.remove(this);
         }
-        (this as unknown as any).clear();
+        (this as any).clear();
       },
     },
     {
@@ -436,19 +467,19 @@ export const Resource = EClass.create({
       name: '_index',
       eType: JSObject,
       _: function () {
-        if (isUndefined((this as unknown as any).__updateIndex)) {
-          (this as unknown as any).__updateIndex = true;
-          (this as unknown as any).on('add remove', () => {
-            (this as unknown as any).__updateIndex = true;
+        if (isUndefined((this as any).__updateIndex)) {
+          (this as any).__updateIndex = true;
+          (this as any).on('add remove', () => {
+            (this as any).__updateIndex = true;
           });
         }
 
-        if ((this as unknown as any).__updateIndex) {
-          (this as unknown as any).__index = buildIndex(this);
-          (this as unknown as any).__updateIndex = false;
+        if ((this as any).__updateIndex) {
+          (this as any).__index = buildIndex(this);
+          (this as any).__updateIndex = false;
         }
 
-        return (this as unknown as any).__index;
+        return (this as any).__index;
       },
     },
   ],
@@ -459,11 +490,11 @@ const EClassResource = Resource;
 class URIConverter {
   public uriMap: Record<any, any> = {};
 
-  map(key: any, value: any) {
+  map(key: string, value: any) {
     this.uriMap[key] = value;
   }
 
-  normalize(uri: any): any {
+  normalize(uri: string): any {
     const split = uri.split('#'),
       base = split[0],
       normalized = this.uriMap[base];
@@ -487,7 +518,14 @@ class URIConverter {
 // ResourceSet
 //
 
-ResourceSet = EClass.create({
+export interface EResourceSet extends EObject {
+  uri?: string;
+  resources: EObject[];
+  elements: (type?: any) => EObject[];
+  getEObject: (uri: string) => EObject | null;
+}
+
+ResourceSet = EClass.create<EResourceSet>({
   name: 'ResourceSet',
   eSuperTypes: [EObject],
   eStructuralFeatures: [
@@ -512,23 +550,23 @@ ResourceSet = EClass.create({
       eType: Resource,
       upperBound: 1,
       name: 'create',
-      _: function (uri: any) {
+      _: function (uri: string | unknown) {
         const attrs: any = isObject(uri) ? uri : { uri: uri };
 
         if (!attrs.uri) {
           throw new Error('Cannot create Resource, missing URI parameter');
         }
 
-        let resource = (this as unknown as EObject)
-          .get('resources')
+        let resource = (this as EObject)
+          .get<EList>('resources')!
           .find((e: any) => e.get('uri') === attrs.uri);
 
         if (resource) return resource;
 
         resource = Resource.create(attrs);
         resource.set('resourceSet', this);
-        (this as unknown as EObject).get('resources').add(resource);
-        (this as unknown as EObject).trigger('add', resource);
+        (this as EObject).get<EList>('resources')!.add(resource);
+        (this as EObject).trigger('add', resource);
 
         return resource;
       },
@@ -538,7 +576,7 @@ ResourceSet = EClass.create({
       eType: EObject,
       upperBound: 1,
       name: 'getEObject',
-      _: function (uri: any) {
+      _: function (uri: string) {
         let split = uri.split('#'),
           base = split[0],
           fragment = split[1],
@@ -554,9 +592,9 @@ ResourceSet = EClass.create({
           resource = ePackage.eResource();
 
           if (!resource) {
-            resource = (this as unknown as EObject).create({ uri: base });
+            resource = (this as EObject).create({ uri: base });
             resource.add(ePackage);
-            (this as unknown as EObject).get('resources').add(resource);
+            (this as EObject).get<EList>('resources')!.add(resource);
             resource.set('resourceSet', this);
           }
         }
@@ -565,8 +603,8 @@ ResourceSet = EClass.create({
           return resource.getEObject(fragment);
         }
 
-        resource = (this as unknown as EObject)
-          .get('resources')
+        resource = (this as EObject)
+          .get<EList>('resources')!
           .find((e: any) => e.get('uri') === base);
 
         return resource ? resource.getEObject(fragment) : null;
@@ -577,10 +615,10 @@ ResourceSet = EClass.create({
       eType: EObject,
       upperBound: -1,
       name: 'elements',
-      _: function (type: any) {
+      _: function (type?: EObject) {
         const filter = (el: any) => (!type ? true : el.isKindOf(type));
-        const contents = (this as unknown as EObject)
-          .get('resources')
+        const contents = (this as EObject)
+          .get<EList>('resources')!
           .map((m: any) => values(m._index()).filter(filter));
         return flatten(contents);
       },
@@ -591,11 +629,11 @@ ResourceSet = EClass.create({
       upperBound: 1,
       name: 'uriConverter',
       _: function () {
-        if (!(this as unknown as any)._converter) {
-          (this as unknown as any)._converter = new URIConverter();
+        if (!(this as any)._converter) {
+          (this as any)._converter = new URIConverter();
         }
 
-        return (this as unknown as any)._converter;
+        return (this as any)._converter;
       },
     },
     {
@@ -605,11 +643,11 @@ ResourceSet = EClass.create({
       name: 'toJSON',
       _: function () {
         const result: any = {
-          total: (this as unknown as EObject).get('resources').size(),
+          total: (this as EObject).get<EList>('resources')!.size(),
           resources: [],
         };
 
-        (this as unknown as EObject).get('resources').each((resource: any) => {
+        (this as EObject).get<EList>('resources')!.each((resource: any) => {
           result.resources.push({
             uri: resource.get('uri'),
             length: resource.get('contents').size(),
@@ -630,7 +668,7 @@ ResourceSet = EClass.create({
 
         data.resources.forEach((resource: any) => {
           if (resource.uri) {
-            const resourceSet = (this as unknown as any).get('resourceSet');
+            const resourceSet = (this as any).get('resourceSet');
             if (resourceSet) {
               resourceSet.create({ uri: resource.uri });
             }
@@ -656,11 +694,11 @@ const EPackageResource = EPackage.create({
 })!;
 
 const EcoreResource = Resource.create({ uri: EcorePackage.get('nsURI') })!;
-(EcoreResource as unknown as any).add(EcorePackage);
+(EcoreResource as any).add(EcorePackage);
 const ResourceResource = Resource.create({
   uri: EPackageResource.get('nsURI'),
 })!;
-(ResourceResource as unknown as any).add(EPackageResource);
+(ResourceResource as any).add(EPackageResource);
 
 EPackage.Registry.register(EPackageResource);
 

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { it, describe, expect } from 'vitest';
-import { Resource, ResourceSet } from '../src/resource';
+import { EResource, Resource, ResourceSet } from '../src/resource';
 import {
   EClass,
   EPackage,
@@ -8,6 +8,7 @@ import {
   EString,
   create,
   EAttribute,
+  EList,
 } from '../src/ecore';
 
 describe('Resource', () => {
@@ -20,8 +21,8 @@ describe('Resource', () => {
         name: 'label',
         eType: EString,
       });
-      p.get('eClassifiers').add(c1);
-      c1.get('eStructuralFeatures').add(c1_label);
+      p.get<EList>('eClassifiers')!.add(c1);
+      c1.get<EList>('eStructuralFeatures')!.add(c1_label);
       (m as unknown as any).add(p);
 
       expect((m as unknown as any).getEObject('/')).toEqual(p);
@@ -30,7 +31,7 @@ describe('Resource', () => {
     });
 
     it('should build correct index for EModelElements with multiple roots', () => {
-      let resourceSet = ResourceSet!.create()!;
+      let resourceSet = ResourceSet.create()!;
       let r = resourceSet.create({ uri: 'test' })!;
       let p1 = EPackage.create({
         name: 'p1',
@@ -42,16 +43,16 @@ describe('Resource', () => {
         name: 'label',
         eType: EString,
       })!;
-      c1.get('eStructuralFeatures').add(c1_label);
-      p1.get('eClassifiers').add(c1);
+      c1.get<EList>('eStructuralFeatures')!.add(c1_label);
+      p1.get<EList>('eClassifiers')!.add(c1);
       let p2 = EPackage.create({
         name: 'p2',
         nsPrefix: 'p2',
         nsURI: 'test/p2',
       })!;
       let c2 = EClass.create({ name: 'C2' })!;
-      p2.get('eClassifiers').add(c2);
-      r.get('contents').add(p1).add(p2);
+      p2.get<EList>('eClassifiers')!.add(c2);
+      r.get<EList>('contents')!.add(p1).add(p2);
 
       expect((r as unknown as any).getEObject('/0')).toEqual(p1);
       expect((r as unknown as any).getEObject('/1')).toEqual(p2);
@@ -69,33 +70,33 @@ describe('Resource', () => {
       })!;
       (testModel as unknown as any).add(testPackage);
       let Container = EClass.create({ name: 'Container' })!;
-      testPackage.get('eClassifiers').add(Container);
+      testPackage.get<EList>('eClassifiers')!.add(Container);
       let Container_child = EReference.create({
         name: 'child',
         upperBound: -1,
         containment: true,
       })!;
 
-      Container.get('eStructuralFeatures').add(Container_child);
+      Container.get<EList>('eStructuralFeatures')!.add(Container_child);
       let Child = EClass.create({ name: 'Child' })!;
-      testPackage.get('eClassifiers').add(Child);
+      testPackage.get<EList>('eClassifiers')!.add(Child);
       let Child_manyRefs = EReference.create({
         name: 'manyRefs',
         upperBound: -1,
       });
-      Child.get('eStructuralFeatures').add(Child_manyRefs);
+      Child.get<EList>('eStructuralFeatures')!.add(Child_manyRefs);
 
       it('should be correct', () => {
         let m = Resource.create({ uri: 'instance.json' });
         let contain = create(Container);
         let c1 = create(Child);
         let c2 = create(Child);
-        contain.get('child').add(c1);
-        contain.get('child').add(c2);
+        contain.get<EList>('child')!.add(c1);
+        contain.get<EList>('child')!.add(c2);
         (m as unknown as any).add(contain);
 
         expect(contain).toBeDefined();
-        expect(2).toBe(contain.get('child').size());
+        expect(2).toBe(contain.get<EList>('child')!.size());
 
         expect(contain).toEqual((m as unknown as any).getEObject('/'));
         expect(c1).toEqual((m as unknown as any).getEObject('//@child.0'));
@@ -206,7 +207,7 @@ describe('Resource', () => {
         },
       ];
 
-      let rs = ResourceSet!.create()!;
+      let rs = ResourceSet.create()!;
       (rs.create({ uri: 'simple.json' })! as unknown as any).load(
         model,
         (resource: any, err: any) => {
@@ -223,7 +224,7 @@ describe('Resource', () => {
 
   describe('load model from filesystem', () => {
     it('should build the model', () => {
-      let model = Resource.create({ uri: 'simple.json' });
+      let model = Resource.create<EResource>({ uri: 'simple.json' })!;
 
       fs.readFile(
         './test/models/simple.json',
@@ -233,8 +234,8 @@ describe('Resource', () => {
             return console.log(err);
           }
 
-          (model as unknown as any).load(data, (model: any, _: any) => {
-            let contents = model.get('contents').array();
+          model.load(data, (model: EResource, _: any) => {
+            let contents = model.get<EList>('contents')!.array();
             expect(contents).toBeDefined();
             expect(contents.length).toBe(1);
 
@@ -274,7 +275,7 @@ describe('Resource', () => {
 
   describe('toJSON', () => {
     it('should produce a valid JSON', () => {
-      let model = Resource.create({ uri: 'simple.json' });
+      let model = Resource.create<EResource>({ uri: 'simple.json' })!;
 
       fs.readFile(
         './test/models/simple.json',
@@ -284,7 +285,7 @@ describe('Resource', () => {
             return console.log(err);
           }
 
-          (model as unknown as any).load(data, (model: any, _: any) => {
+          model.load(data, (model: EResource, _: any) => {
             let json = model.to(JSON);
 
             expect(json).toBeDefined();

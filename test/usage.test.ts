@@ -6,6 +6,8 @@ import {
   EClass,
   EClassifier,
   EInt,
+  EList,
+  EObject,
   EPackage,
   EReference,
   EString,
@@ -79,7 +81,7 @@ describe('Model creation', () => {
 
       expect(MyClass.get('name')).toEqual('MyClass');
       expect(MyClass.get('abstract')).toEqual(false);
-      expect(MyClass.get('eStructuralFeatures').size()).toEqual(0);
+      expect(MyClass.get<EList>('eStructuralFeatures')!.size()).toEqual(0);
 
       MyClass.set('abstract', true);
       expect(MyClass.get('abstract')).toEqual(true);
@@ -93,7 +95,7 @@ describe('Model creation', () => {
 
       expect(MyClass.get('name')).toEqual('MyClass');
       expect(MyClass.get('abstract')).toEqual(false);
-      expect(MyClass.get('eStructuralFeatures').size()).toEqual(0);
+      expect(MyClass.get<EList>('eStructuralFeatures')!.size()).toEqual(0);
 
       MyClass.set('abstract', true);
       expect(MyClass.get('abstract')).toEqual(true);
@@ -108,7 +110,7 @@ describe('Model creation', () => {
       checkEClass(MyClass);
       expect(MyClass.get('name')).toEqual('MyClass');
       expect(MyClass.get('abstract')).toEqual(false);
-      expect(MyClass.get('eStructuralFeatures').size()).toEqual(0);
+      expect(MyClass.get<EList>('eStructuralFeatures')!.size()).toEqual(0);
     });
 
     it('should use eClass value from parameters', () => {
@@ -121,7 +123,7 @@ describe('Model creation', () => {
       checkEClass(MyClass);
       expect(MyClass.get('name')).toEqual('MyClass');
       expect(MyClass.get('abstract')).toEqual(false);
-      expect(MyClass.get('eStructuralFeatures').size()).toEqual(0);
+      expect(MyClass.get<EList>('eStructuralFeatures')!.size()).toEqual(0);
     });
 
     it('should be done using EClass.create with parameters', () => {
@@ -130,44 +132,48 @@ describe('Model creation', () => {
       checkEClass(MyClass);
       expect(MyClass.get('name')).toEqual('MyClass');
       expect(MyClass.get('abstract')).toEqual(false);
-      expect(MyClass.get('eStructuralFeatures').size()).toEqual(0);
+      expect(MyClass.get<EList>('eStructuralFeatures')!.size()).toEqual(0);
     });
 
     it('should return correct eStructuralFeatures', () => {
       let MyClass = EClass.create()!;
-      expect(MyClass.get('eAllStructuralFeatures').length).toEqual(0);
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(0);
 
       let Name = EAttribute.create({
         name: 'name',
         eType: EString,
       });
-      MyClass.get('eStructuralFeatures').add(Name);
+      MyClass.get<EList>('eStructuralFeatures')!.add(Name);
 
-      expect(MyClass.get('eAllStructuralFeatures').length).toEqual(1);
-      expect(MyClass.get('eAllStructuralFeatures')[0]).toEqual(Name);
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(1);
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.at(0)).toEqual(Name);
 
       let SuperClass = EClass.create()!;
-      MyClass.get('eSuperTypes').add(SuperClass);
+      MyClass.get<EList>('eSuperTypes')!.add(SuperClass);
 
-      expect(MyClass.get('eAllStructuralFeatures').length).toEqual(1);
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(1);
 
       let SuperAttr = EAttribute.create({
         name: 'value',
         eType: EString,
       });
-      SuperClass.get('eStructuralFeatures').add(SuperAttr);
+      SuperClass.get<EList>('eStructuralFeatures')!.add(SuperAttr);
 
-      expect(SuperClass.get('eAllStructuralFeatures').length).toEqual(1);
-      expect(MyClass.get('eAllStructuralFeatures').length).toEqual(2);
+      expect(SuperClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(
+        1,
+      );
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(2);
 
       let OtherAttr = EAttribute.create({
         name: 'other',
         eType: EString,
       });
-      MyClass.get('eStructuralFeatures').add(OtherAttr);
+      MyClass.get<EList>('eStructuralFeatures')!.add(OtherAttr);
 
-      expect(SuperClass.get('eAllStructuralFeatures').length).toEqual(1);
-      expect(MyClass.get('eAllStructuralFeatures').length).toEqual(3);
+      expect(SuperClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(
+        1,
+      );
+      expect(MyClass.get<EList>('eAllStructuralFeatures')!.length).toEqual(3);
     });
   });
 
@@ -276,9 +282,13 @@ describe('Model creation', () => {
       checkEAnnotation(MyAnn);
 
       expect(MyAnn.get('source')).toEqual('foo');
-      expect(MyAnn.get('details').size()).toEqual(1);
-      expect(MyAnn.get('details').at(0).get('key')).toEqual('kk');
-      expect(MyAnn.get('details').at(0).get('value')).toEqual('val');
+      expect(MyAnn.get<EList>('details')!.size()).toEqual(1);
+      expect(MyAnn.get<EList>('details')!.at<EObject>(0).get('key')).toEqual(
+        'kk',
+      );
+      expect(MyAnn.get<EList>('details')!.at<EObject>(0).get('value')).toEqual(
+        'val',
+      );
     });
 
     it('should create details entry with EStringToStringMapEntry.create', () => {
@@ -325,7 +335,7 @@ describe('Model creation', () => {
               name: 'bb',
               // eType: '//A'
               eType: () => {
-                return p.get('eClassifiers').at(0);
+                return p.get<EList>('eClassifiers')!.at(0);
               },
             },
           ],
@@ -336,29 +346,29 @@ describe('Model creation', () => {
     expect(p).toBeDefined();
 
     expect(p.get('name')).toEqual('p');
-    expect(p.get('eClassifiers').size()).toEqual(1);
+    expect(p.get<EList>('eClassifiers')!.size()).toEqual(1);
 
-    let A = p.get('eClassifiers').at(0);
+    let A = p.get<EList>('eClassifiers')!.at<EObject>(0);
     expect(A.eClass).toEqual(EClass);
     expect(A.get('name')).toEqual('A');
-    expect(A.get('eAnnotations').size()).toEqual(1);
+    expect(A.get<EList>('eAnnotations')!.size()).toEqual(1);
 
-    let Aann = A.get('eAnnotations').at(0);
+    let Aann = A.get<EList>('eAnnotations')!.at<EObject>(0);
     expect(Aann.get('source')).toEqual('test');
-    expect(Aann.get('details').size()).toEqual(1);
-    let d = Aann.get('details').at(0);
+    expect(Aann.get<EList>('details')!.size()).toEqual(1);
+    let d = Aann.get<EList>('details')!.at<EObject>(0);
     expect(d.eClass).toEqual(EStringToStringMapEntry);
     expect(d.get('key')).toEqual('k');
     expect(d.get('value')).toEqual('v');
 
-    expect(A.get('eStructuralFeatures').size()).toEqual(2);
+    expect(A.get<EList>('eStructuralFeatures')!.size()).toEqual(2);
 
-    let aa = A.get('eStructuralFeatures').at(0);
+    let aa = A.get<EList>('eStructuralFeatures')!.at<EObject>(0);
     expect(aa.eClass).toEqual(EAttribute);
     expect(aa.get('name')).toEqual('aa');
     expect(aa.get('eType')).toEqual(EString);
 
-    let bb = A.get('eStructuralFeatures').at(1);
+    let bb = A.get<EList>('eStructuralFeatures')!.at<EObject>(1);
     expect(bb.eClass).toEqual(EReference);
     expect(bb.get('name')).toEqual('bb');
     expect(bb.get('eType')).toEqual(A);
@@ -366,7 +376,7 @@ describe('Model creation', () => {
 });
 
 let createModel = () => {
-  let resourceSet = ResourceSet!.create()!;
+  let resourceSet = ResourceSet.create()!;
   let m1 = resourceSet.create({ uri: 'model1' })!;
   let p1 = EPackage.create({
     name: 'p1',
@@ -378,7 +388,7 @@ let createModel = () => {
   let BarBar = EClass.create({ name: 'BarBar' })!;
   let FooAnnotation = EAnnotation.create({ source: 'foo' })!;
 
-  Foo.get('eStructuralFeatures')
+  Foo.get<EList>('eStructuralFeatures')!
     .add(
       EReference.create({
         name: 'child',
@@ -402,24 +412,24 @@ let createModel = () => {
       }),
     );
 
-  Foo.get('eAnnotations').add(FooAnnotation);
-  Bar.get('eSuperTypes').add(Foo);
-  BarBar.get('eSuperTypes').add(Bar);
+  Foo.get<EList>('eAnnotations')!.add(FooAnnotation);
+  Bar.get<EList>('eSuperTypes')!.add(Foo);
+  BarBar.get<EList>('eSuperTypes')!.add(Bar);
 
-  p1.get('eClassifiers').add(Foo);
-  p1.get('eClassifiers').add(Bar);
-  p1.get('eClassifiers').add(BarBar);
-  m1.get('contents').add(p1);
+  p1.get<EList>('eClassifiers')!.add(Foo);
+  p1.get<EList>('eClassifiers')!.add(Bar);
+  p1.get<EList>('eClassifiers')!.add(BarBar);
+  m1.get<EList>('contents')!.add(p1);
 
   return m1;
 };
 
 describe('Instance creation', () => {
   let model = createModel()!;
-  let p1 = model.get('contents').at(0);
-  let Foo = p1.get('eClassifiers').at(0);
-  let Bar = p1.get('eClassifiers').at(1);
-  let BarBar = p1.get('eClassifiers').at(2);
+  let p1 = model.get<EList>('contents')!.at<EObject>(0);
+  let Foo = p1.get<EList>('eClassifiers')!.at<EObject>(0);
+  let Bar = p1.get<EList>('eClassifiers')!.at<EObject>(1);
+  let BarBar = p1.get<EList>('eClassifiers')!.at<EObject>(2);
 
   describe('creation of an EClass', () => {
     it('should return correct subtypes', () => {
@@ -427,21 +437,21 @@ describe('Instance creation', () => {
       // EClasses
       EPackage.Registry.register(p1);
 
-      let FooSubs = Foo.get('eAllSubTypes');
+      let FooSubs = Foo.get<EList>('eAllSubTypes')!;
       expect(FooSubs.length).toEqual(2);
       expect(FooSubs.includes(Bar)).toBe(true);
       expect(FooSubs.includes(BarBar)).toBe(true);
     });
 
     it('should have correct annotations', () => {
-      expect(Foo.get('eAnnotations').size()).toEqual(1);
+      expect(Foo.get<EList>('eAnnotations')!.size()).toEqual(1);
 
-      let ann = Foo.get('eAnnotations').at(0);
+      let ann = Foo.get<EList>('eAnnotations')!.at<EObject>(0);
       expect(ann.get('source')).toEqual('foo');
     });
 
     it('should create instances with correct values passed in create', () => {
-      let f = Foo.create({ label: 'f', numbers: [1, 2, 3] });
+      let f = Foo.create({ label: 'f', numbers: [1, 2, 3] })!;
 
       expect(f).toBeDefined();
       expect(f.eClass).toEqual(Foo);
@@ -451,10 +461,10 @@ describe('Instance creation', () => {
   });
 
   describe('creation of an EObject', () => {
-    let User: any;
+    let User: EObject;
 
     beforeEach(() => {
-      User = EClass.create({ name: 'User' });
+      User = EClass.create({ name: 'User' })!;
       let User_name = EAttribute.create({
         name: 'name',
         eType: EString,
@@ -463,8 +473,8 @@ describe('Instance creation', () => {
         name: 'friends',
         eType: User,
       });
-      User.get('eStructuralFeatures').add(User_name);
-      User.get('eStructuralFeatures').add(User_friends);
+      User.get<EList>('eStructuralFeatures')!.add(User_name);
+      User.get<EList>('eStructuralFeatures')!.add(User_friends);
     });
 
     it('should be an instanceof User', () => {

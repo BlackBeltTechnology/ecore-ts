@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import { ResourceSet } from '../src/resource';
 import { XMI } from '../src/xmi';
+import { EList, EObject } from '../src/ecore';
 
-let resourceSet = ResourceSet!.create()!;
+let resourceSet = ResourceSet.create()!;
 let resource = resourceSet.create({ uri: 'sample.json' })!;
 
-function loaded(resource: any) {
+function loaded(resource: EObject) {
   console.log(
-    resource.get('contents').map((e: any) => {
+    resource.get<EList>('contents')!.map((e) => {
       return { nsURI: e.get('nsURI') };
     }),
   );

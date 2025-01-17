@@ -1,20 +1,22 @@
 import { difference } from 'lodash-es';
 import sax from 'sax';
 import { EList, create } from './ecore.ts';
-import { Resource, ResourceSet } from './resource.ts';
+import { EResource, EResourceSet, Resource, ResourceSet } from './resource.ts';
 
 export const XMI = {
   dataType: 'xml',
   contentType: 'application/xml',
 
-  parse(model: any, data: any) {
+  parse(model: EResource, data: any) {
     if (!sax) throw new Error('Sax is missing.');
 
     const parser = sax.parser(true),
-      resourceSet = model.get('resourceSet') || ResourceSet!.create(),
+      resourceSet =
+        model.get<EResourceSet>('resourceSet') ||
+        ResourceSet!.create<EResourceSet>()!,
       namespaces: any[] = [];
 
-    function findNamespaces(attributes: any) {
+    function findNamespaces(attributes: Record<any, any>) {
       if (!attributes) return;
 
       Object.entries(attributes).forEach(([key, num]) => {
@@ -27,7 +29,7 @@ export const XMI = {
       });
     }
 
-    function getNamespace(prefix: any) {
+    function getNamespace(prefix: string) {
       const ns = namespaces.find((ns) => ns.prefix === prefix);
 
       return ns ? ns.uri : null;
@@ -37,11 +39,11 @@ export const XMI = {
       return isPrefixedString(node.name);
     }
 
-    function isPrefixedString(string: any) {
+    function isPrefixedString(string: string) {
       return string.indexOf(':') !== -1;
     }
 
-    function getClassURIFromPrefix(value: any) {
+    function getClassURIFromPrefix(value: string) {
       const split = value.split(':'),
         prefix = split[0],
         className = split[1];
@@ -84,7 +86,7 @@ export const XMI = {
       rootObject: any,
       toResolve: any = [];
 
-    parser.ontext = (text: any) => {
+    parser.ontext = (text: string) => {
       if (currentNode && currentNode.waitingForAttributeText) {
         // The attribute was provided as an XMI element,
         // so store it to the parent node as an attribute.
@@ -241,7 +243,7 @@ export const XMI = {
     resolveReferences();
   },
 
-  to: (model: any, indent: any) => {
+  to: (model: any, indent?: boolean) => {
     let docRoot = '',
       contents = model.get('contents').array(),
       nsPrefix: string,
@@ -434,7 +436,7 @@ export const XMI = {
   },
 };
 
-function formatXml(xml: any) {
+function formatXml(xml: string) {
   const reg = /(>)(<)(\/*)/g,
     wsexp = / *([^ ].*[^ ]) *\n/g,
     contexp = /(<.+>)(.+\n)/g;

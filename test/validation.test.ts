@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { it, describe, expect } from 'vitest';
 import { ResourceSet } from '../src/resource';
 import { XMI } from '../src/xmi';
-import { EPackage } from '../src/ecore';
+import { EList, EPackage } from '../src/ecore';
 
 describe('Parsing of invalid model files', () => {
   it('should detect an invalid eSuperType', () => {
@@ -11,7 +11,7 @@ describe('Parsing of invalid model files', () => {
     //Present behavior is that the offending eSuperType entry is
     //simply removed silently.
 
-    let modelSet = ResourceSet!.create()!;
+    let modelSet = ResourceSet.create()!;
     let model = modelSet.create({ uri: 'test6.xmi' })!;
     let modelFile = fs.readFileSync('./test/models/test6.xmi', 'utf8');
     let passFlag = false;
@@ -41,14 +41,14 @@ describe('Parsing of invalid model files', () => {
     // This test should detect that an instance of test5.xmi
     // has an invalid type. Child 2 in test5-instance4.xmi has
     // invalid type. The correct version of instance4 is instance1.
-    let modelSet = ResourceSet!.create()!;
+    let modelSet = ResourceSet.create()!;
     let model = modelSet.create({ uri: 'test5.xmi' })!;
     let modelFile = fs.readFileSync('./test/models/test5.xmi', 'utf8');
     (model as unknown as any).parse(modelFile, XMI);
-    let firstElement = model.get('contents').first();
+    let firstElement = model.get<EList>('contents')!.first();
     EPackage.Registry.register(firstElement);
 
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-instance4.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-instance4.xmi',

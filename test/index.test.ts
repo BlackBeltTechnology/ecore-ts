@@ -1,20 +1,20 @@
 import { expect, it, describe, beforeEach } from 'vitest';
-import { ResourceSet } from '../src/resource';
-import { EClass, EPackage } from '../src/ecore';
+import { EResource, ResourceSet } from '../src/resource';
+import { EClass, EList, EObject, EPackage } from '../src/ecore';
 
 describe('index', () => {
-  let resource: any;
+  let resource: EResource;
 
   beforeEach(() => {
-    let resourceSet = ResourceSet!.create()!;
+    let resourceSet = ResourceSet.create()!;
 
     let p = EPackage.create({ name: 'p' })!;
     let a = EClass.create({ name: 'A' })!;
     let b = EClass.create({ name: 'B' })!;
 
-    p.get('eClassifiers').add(a).add(b);
+    p.get<EList>('eClassifiers')!.add(a).add(b);
 
-    resource = resourceSet.create('test');
+    resource = resourceSet.create<EResource>('test')!;
     resource.add(p);
   });
 
@@ -37,7 +37,11 @@ describe('index', () => {
     });
 
     let c = EClass.create({ name: 'C' })!;
-    resource.get('contents').at(0).get('eClassifiers').add(c);
+    resource
+      .get<EList>('contents')!
+      .at<EObject>(0)
+      .get<EList>('eClassifiers')!
+      .add(c);
   });
 
   it('should be update when removing an element', () => {
@@ -50,7 +54,9 @@ describe('index', () => {
       expect(Object.keys(index).length).toBe(2);
     });
 
-    let root = resource.get('contents').at(0);
-    root.get('eClassifiers').remove(root.get('eClassifiers').at(1));
+    let root = resource.get<EList>('contents')!.at<EObject>(0);
+    root
+      .get<EList>('eClassifiers')!
+      .remove(root.get<EList>('eClassifiers')!.at(1));
   });
 });

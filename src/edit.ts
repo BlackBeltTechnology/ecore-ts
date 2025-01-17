@@ -1,19 +1,30 @@
 import { union, flatten } from 'lodash-es';
-import { EOperation } from './ecore.ts';
+import { EObject, EOperation } from './ecore.ts';
+import { EResourceSet } from './resource.ts';
 
-function isNotAbstract(type: any): boolean {
-  return !type.get('abstract');
+export interface Descriptor {
+  label: string;
+  owner: EObject;
+  feature: EObject;
+  type: EObject;
 }
 
-function getSubTypes(type: any): any[] {
-  if (!type || !type.eClass) return [];
-
-  const allSubTypes = type.get('eAllSubTypes');
-
-  return union([type], allSubTypes).filter(isNotAbstract);
+function isNotAbstract(type: EObject): boolean {
+  return !type.get<boolean>('abstract');
 }
 
-function childTypes(object: any, createDescriptor?: any): any[] {
+function getSubTypes(type: EObject | unknown): EObject[] {
+  if (!type || !(type as EObject).eClass) return [];
+
+  const allSubTypes = (type as EObject).get<Array<EObject>>('eAllSubTypes')!;
+
+  return union<EObject>([type as EObject], allSubTypes).filter(isNotAbstract);
+}
+
+function childTypes(
+  object: EObject,
+  createDescriptor?: Function,
+): Array<Descriptor | EObject> {
   if (!object) return [];
 
   const allContainments = object.eClass.get('eAllContainments');
@@ -30,16 +41,23 @@ function childTypes(object: any, createDescriptor?: any): any[] {
   return flatten(allContainments.map(allSubTypes));
 }
 
-function siblingTypes(object: any, createDescriptor?: any): any[] {
+function siblingTypes(
+  object: EObject,
+  createDescriptor?: Function,
+): Array<Descriptor | EObject> {
   if (!object) return [];
 
-  const eContainer = object.eContainer;
+  const eContainer = object.eContainer!;
   const siblings = childTypes(eContainer, createDescriptor);
 
   return siblings;
 }
 
-function createDescriptor(object: any, feature: any, types: any[]): any[] {
+function createDescriptor(
+  object: EObject,
+  feature: EObject,
+  types: EObject[],
+): Array<Descriptor | EObject> {
   return types.map((type: any) => ({
     label: 'New ' + type.get('name'),
     owner: object,
@@ -48,20 +66,20 @@ function createDescriptor(object: any, feature: any, types: any[]): any[] {
   }));
 }
 
-function childDescriptors(object: any): any[] {
+function childDescriptors(object: EObject): Array<Descriptor | EObject> {
   return childTypes(object, createDescriptor);
 }
 
-function siblingDescriptors(object: any): any[] {
+function siblingDescriptors(object: EObject): Array<Descriptor | EObject> {
   return siblingTypes(object, createDescriptor);
 }
 
-function textNamedElement(object: any): string {
+function textNamedElement(object: EObject): string {
   return object.get('name') || '';
 }
 
-function textTypedElement(object: any): string {
-  const type = object.get('eType');
+function textTypedElement(object: EObject): string {
+  const type = object.get<EObject>('eType');
   const isOp = object.eClass === EOperation;
   const typeName = type ? type.get('name') : null;
 
@@ -70,16 +88,16 @@ function textTypedElement(object: any): string {
   );
 }
 
-function choiceOfValues(owner: any, feature: any): any[] {
+function choiceOfValues(owner: EObject, feature: EObject): any[] {
   if (
     owner == null ||
     owner.eResource() == null ||
-    owner.eResource().get('resourceSet') == null
+    owner.eResource()!.get('resourceSet') == null
   )
     throw new Error('Bad argument');
 
   const type = feature.get('eType');
-  const resourceSet = owner.eResource().get('resourceSet');
+  const resourceSet = owner.eResource()!.get<EResourceSet>('resourceSet')!;
   const elements = resourceSet.elements();
 
   return elements.filter((e: any) => e.isKindOf(type));
@@ -92,7 +110,7 @@ export const Edit = {
   siblingDescriptors: siblingDescriptors,
   choiceOfValues: choiceOfValues,
 
-  _get(fn: any, object: any) {
+  _get(fn: string, object: EObject) {
     if (!object || !object.eClass) return null;
 
     const eClass = object.eClass.get('name');
@@ -107,15 +125,15 @@ export const Edit = {
     }
   },
 
-  text(object: any) {
+  text(object: EObject) {
     return this._get('text', object);
   },
 
-  icon(object: any) {
+  icon(object: EObject) {
     return this._get('icon', object);
   },
 
-  label(object: any) {
+  label(object: EObject) {
     return this._get('label', object);
   },
 
@@ -135,7 +153,7 @@ export const Edit = {
     icon: 'icon-EEnum',
   },
   EEnumLiteral: {
-    text(object: any) {
+    text(object: EObject) {
       return object.get('name') + ' = ' + object.get('value');
     },
     label: textNamedElement,
@@ -162,19 +180,19 @@ export const Edit = {
     icon: 'icon-EPackage',
   },
   EAnnotation: {
-    text(object: any) {
+    text(object: EObject) {
       return object.get('source');
     },
-    label(object: any) {
+    label(object: EObject) {
       return object.get('source');
     },
     icon: 'icon-EAnnotation',
   },
   EStringToStringMapEntry: {
-    text(object: any) {
+    text(object: EObject) {
       return object.get('key') + ' -> ' + object.get('value');
     },
-    label(object: any) {
+    label(object: EObject) {
       return object.get('key');
     },
     icon: 'icon-EStringToStringMapEntry',
@@ -185,10 +203,10 @@ export const Edit = {
     icon: 'icon-EObject',
   },
   Resource: {
-    text(object: any) {
+    text(object: EObject) {
       return object.get('uri');
     },
-    label(object: any) {
+    label(object: EObject) {
       return object.get('uri');
     },
     icon: 'icon-EObject',

@@ -3,10 +3,11 @@ import {
   EAttribute,
   EClass,
   EcorePackage,
+  EList,
   EObject,
   EString,
 } from '../src/ecore';
-import { ResourceSet } from '../src/resource';
+import { EResource, ResourceSet } from '../src/resource';
 
 describe('Events', () => {
   it('should be available in all EObject instances', () => {
@@ -31,7 +32,7 @@ describe('Events', () => {
     it('should bind and trigger multiple events', () => {
       let Test = EAttribute.create({ name: 'Test', upperBound: 0 })!;
       Test.on('a b c', () => {
-        Test.set({ upperBound: Test.get('upperBound') + 1 });
+        Test.set({ upperBound: Test.get<number>('upperBound')! + 1 });
       });
 
       expect(Test.get('upperBound')).toBe(0);
@@ -45,7 +46,7 @@ describe('Events', () => {
       Test.trigger('c');
       expect(Test.get('upperBound')).toBe(4);
 
-      (Test as unknown as any).off('a c');
+      Test.off('a c');
 
       Test.trigger('a b c');
       expect(Test.get('upperBound')).toBe(5);
@@ -55,11 +56,11 @@ describe('Events', () => {
   describe('#set', () => {
     it('should trigger a change event after setting a property', () => {
       let Test = EClass.create({ name: 'Test' })!;
-      Test.on('change', (changed: any) => {
+      Test.on('change', (changed) => {
         expect(changed).toBe('name');
         expect(Test.get(changed)).toBe('TestTest');
       });
-      Test.on('change:name', (changed: any) => {
+      Test.on('change:name', (changed) => {
         expect(changed).toBe('name');
         expect(Test.get(changed)).toBe('TestTest');
       });
@@ -74,23 +75,23 @@ describe('Events', () => {
         name: 'name',
         eType: EString,
       })!;
-      Test.on('add:eStructuralFeatures', (added: any) => {
+      Test.on('add:eStructuralFeatures', (added) => {
         expect(added).toEqual(Name);
       });
-      Test.get('eStructuralFeatures').add(Name);
+      Test.get<EList>('eStructuralFeatures')!.add(Name);
     });
   });
 
   describe('#ResourceSet.create', () => {
     it('should trigger an add event', () => {
-      let resourceSet = ResourceSet!.create()!;
+      let resourceSet = ResourceSet.create<EResource>()!;
 
-      resourceSet.on('add', (resource: any) => {
+      resourceSet.on('add', (resource) => {
         expect(resource).toBeDefined();
-        expect(resourceSet.get('resources').size()).toBe(1);
-        expect(resourceSet.get('resources').at(0).get('uri')).toBe(
-          'sample.ecore',
-        );
+        expect(resourceSet.get<EList>('resources')!.size()).toBe(1);
+        expect(
+          resourceSet.get<EList>('resources')!.at<EObject>(0).get('uri'),
+        ).toBe('sample.ecore');
       });
 
       resourceSet.create({ uri: 'sample.ecore' });

@@ -1,6 +1,10 @@
 import { has, isObject, without } from 'lodash-es';
+import { EResource } from './resource.ts';
 
-export function create(eClass: any, attributes?: any): EObject {
+export function create<T extends EObject>(
+  eClass: EObject | unknown,
+  attributes?: Record<any, any> | string,
+): T {
   let attrs: any, eObject;
 
   if (!attributes) {
@@ -12,7 +16,7 @@ export function create(eClass: any, attributes?: any): EObject {
     }
   } else {
     attrs = attributes;
-    attrs.eClass = attributes.eClass || eClass;
+    attrs.eClass = (attributes as Record<any, any>).eClass || eClass;
   }
 
   if (!attrs.eClass || attrs.eClass.get('abstract')) {
@@ -21,26 +25,26 @@ export function create(eClass: any, attributes?: any): EObject {
 
   eObject = new EObject(attrs);
 
-  return eObject;
+  return eObject as T;
 }
 
 export class EObject {
   // @ts-ignore
   public _: any;
   public eClass: any;
-  public values?: any;
-  private _callbacks: any;
+  public values: Record<any, any>;
+  private _callbacks?: Record<any, any>;
   public eContainingFeature: any;
-  public eContainer: any;
+  public eContainer?: EObject | EResource;
   private __updateContents: any;
   private __eContents: any;
   public _id: any;
-  public Registry: any;
+  // @ts-ignore
+  public Registry: ERegistry;
 
-  constructor(attributes?: any) {
-    if (!attributes) attributes = {};
+  constructor(attributes: Record<any, any> = {}) {
     this.eClass = attributes.eClass;
-    this.values = {} as any;
+    this.values = {};
 
     // stores function for eOperations.
     if (attributes._) {
@@ -58,14 +62,18 @@ export class EObject {
     // noop
   }
 
-  on(events: any, callback: any, context?: any) {
-    let calls, event, list;
+  on(
+    events: string,
+    callback: (eObject: EObject | string) => void,
+    context?: any,
+  ) {
+    let calls: Record<any, any>, event, list: any[];
     if (!callback) return this;
 
-    events = events.split(/\s+/);
+    let eventsSplit: string[] = events.split(/\s+/);
     calls = this._callbacks || (this._callbacks = {});
 
-    while ((event = events.shift())) {
+    while ((event = eventsSplit.shift())) {
       list = calls[event] || (calls[event] = []);
       list.push(callback, context);
     }
@@ -73,7 +81,7 @@ export class EObject {
     return this;
   }
 
-  off(events: any, callback: any, context: any) {
+  off(events: string, callback?: any, context?: any) {
     let event, calls, list, i;
 
     if (!(calls = this._callbacks)) return this;
@@ -82,8 +90,8 @@ export class EObject {
       return this;
     }
 
-    events = events ? events.split(/\s+/) : Object.keys(calls);
-    while ((event = events.shift())) {
+    let eventsSplit = events ? events.split(/\s+/) : Object.keys(calls);
+    while ((event = eventsSplit.shift())) {
       if (!(list = calls[event]) || !(callback || context)) {
         delete calls[event];
         continue;
@@ -104,17 +112,17 @@ export class EObject {
     return this;
   }
 
-  trigger(events: any, ...rest: any[]) {
+  trigger(events: string, ...rest: any[]) {
     let event, calls, list, i, length, args, all;
     if (!(calls = this._callbacks)) return this;
 
-    events = events.split(/\s+/);
+    let eventsSplit = events.split(/\s+/);
     for (i = 1, length = arguments.length; i < length; i++) {
       rest[i - 1] = arguments[i];
     }
     // For each event, walk through the list of callbacks twice, first to
     // trigger the event, then to trigger any `"all"` callbacks.
-    while ((event = events.shift())) {
+    while ((event = eventsSplit.shift())) {
       if ((all = calls.all)) all = all.slice();
       if ((list = calls[event])) list = list.slice();
 
@@ -135,16 +143,16 @@ export class EObject {
     return this;
   }
 
-  initOperations(eObject: any) {
+  initOperations(eObject: EObject) {
     if (!eObject || !eObject.eClass) return;
-    function eAllOperations(eClass: any): EObject[] {
-      const eOperations = eClass.get('eOperations').array();
-      const superTypes = eClass.get('eAllSuperTypes');
+    function eAllOperations(eClass: EObject): EObject[] {
+      const eOperations = eClass.get<EList>('eOperations')!.array();
+      const superTypes = eClass.get<Array<EObject>>('eAllSuperTypes');
       return Array.from(
         new Set(
           [
             eOperations || [],
-            (superTypes || []).map((s: any): any => eAllOperations(s)).flat(),
+            (superTypes || []).map((s) => eAllOperations(s)).flat(),
           ].flat(),
         ),
       );
@@ -158,20 +166,22 @@ export class EObject {
     });
   }
 
-  create(attributes?: any): EObject | undefined {
+  create<T extends EObject>(
+    attributes?: Record<any, any> | string,
+  ): T | undefined {
     if (this.eClass.get('name') !== 'EClass') return;
 
-    return create(this, attributes);
+    return create<T>(this, attributes);
   }
 
-  has(name: any) {
+  has(name: string) {
     return (
       this.values?.hasOwnProperty(name) ||
       getEStructuralFeature(this.eClass, name)
     );
   }
 
-  isSet(name: any) {
+  isSet(name: string) {
     if (!this.has(name)) return false;
 
     const eClass = this.eClass;
@@ -185,25 +195,25 @@ export class EObject {
     }
   }
 
-  set(attrs: any, options?: any) {
-    let attr, key, val, eve;
+  set(attrs: Record<any, any> | string | null, options?: any) {
+    let attr, key: string, val: any, eve;
     if (attrs === null) return this;
 
-    if (attrs.eClass) {
-      attrs = attrs.get('name');
+    if ((attrs as Record<any, any>).eClass) {
+      attrs = (attrs as Record<any, any>).get('name');
     }
 
     // Handle attrs is a hash or attrs is
     // property and options the value to be set.
     if (!isObject(attrs)) {
-      key = attrs;
+      key = attrs as string;
       (attrs = {} as any)[key] = options;
     }
 
     const eResource = this.eResource();
 
-    for (attr in attrs) {
-      val = attrs[attr];
+    for (attr in attrs as Record<any, any>) {
+      val = (attrs as Record<any, any>)[attr];
       if (typeof val !== 'undefined' && this.has(attr)) {
         if (this.isSet(attr)) {
           this.unset(attr);
@@ -236,12 +246,12 @@ export class EObject {
     return this;
   }
 
-  unset(attrs: any, _?: any) {
+  unset(attrs: Record<any, any> | string, _?: any) {
     let attr, key, eve;
     if (attrs === null) return this;
 
-    if (attrs.eClass) {
-      attrs = attrs.get('name');
+    if ((attrs as Record<any, any>).eClass) {
+      attrs = (attrs as Record<any, any>).get('name');
     }
 
     // Handle attrs is a hash or attrs is
@@ -253,19 +263,19 @@ export class EObject {
 
     const eResource = this.eResource();
 
-    for (attr in attrs) {
+    for (attr in attrs as Record<any, any>) {
       if (this.has(attr) && this.isSet(attr)) {
         // unset
 
         const feature = getEStructuralFeature(this.eClass, attr),
           isContainment = Boolean(feature.get('containment')) === true;
-        const value: any = this.values[attr as any];
+        const value: any = this.values[attr];
 
         if (isContainment) {
           value.eContainingFeature = undefined;
           value.eContainer = undefined;
         }
-        this.values[attr as any] = undefined;
+        this.values[attr] = undefined;
         eve = 'unset:' + attr;
         this.trigger('unset ' + eve, attr);
         if (eResource) eResource.trigger('change', this);
@@ -275,16 +285,20 @@ export class EObject {
     return this;
   }
 
-  get(feature: any) {
+  get<T>(feature: EObject | string): T | null {
     if (!feature) return null;
 
-    const featureName = feature.eClass ? feature.get('name') : feature;
+    const featureName = (
+      (feature as EObject).eClass
+        ? (feature as EObject).get<string>('name')
+        : feature
+    ) as string;
 
     if (!has(this.values, featureName) && this.has(featureName)) {
       initValue(this, getEStructuralFeature(this.eClass, featureName));
     }
 
-    const value = this.values[featureName];
+    const value: any = this.values[featureName];
 
     if (typeof value === 'function') {
       return (value as Function).apply(this);
@@ -293,19 +307,23 @@ export class EObject {
     }
   }
 
-  isTypeOf(type: any) {
+  isTypeOf(type: EObject | string) {
     if (!type || !this.eClass) return false;
 
-    const typeName = type.eClass ? type.get('name') : type;
+    const typeName = (type as EObject).eClass
+      ? (type as EObject).get('name')
+      : type;
 
     return this.eClass.get('name') === typeName;
   }
 
-  isKindOf(type: any) {
+  isKindOf(type: EObject | string) {
     if (!type || !this.eClass) return false;
     if (this.isTypeOf(type)) return true;
 
-    const typeName = type.eClass ? type.get('name') : type,
+    const typeName = (type as EObject).eClass
+        ? (type as EObject).get('name')
+        : type,
       superTypes = this.eClass.get('eAllSuperTypes');
 
     return superTypes.some((eSuper: any) => {
@@ -313,7 +331,7 @@ export class EObject {
     });
   }
 
-  eResource() {
+  eResource(): EObject | null {
     if (this.isKindOf('Resource')) return this;
     if (!this.eContainer) return null;
     if (this.eContainer.isKindOf('Resource')) return this.eContainer;
@@ -348,7 +366,7 @@ export class EObject {
       let value = null;
       this.__eContents = eContainments
         .map((c: any) => {
-          value = this.get(c.get('name'));
+          value = this.get<EList>(c.get('name'));
           return value ? (value.array ? value.array() : value) : [];
         })
         .flat();
@@ -359,7 +377,7 @@ export class EObject {
     return this.__eContents;
   }
 
-  eURI() {
+  eURI(): string {
     // It's possible the adjustments for the id map need to made
     // in the fragment function as the fragment should be the xmi id.
     const eModel = this.eResource();
@@ -388,7 +406,7 @@ export class EObject {
       if (!eContainer) {
         return '/';
       } else if (eContainer.isKindOf('Resource')) {
-        contents = eContainer.get('contents');
+        contents = eContainer.get<EList>('contents')!;
         return contents.size() > 1 ? '/' + contents.indexOf(this) : '/';
       } else {
         return eContainer.fragment() + '/' + this.get('name');
@@ -397,14 +415,18 @@ export class EObject {
 
     // Default fragments
     if (eContainer.isKindOf('Resource')) {
-      contents = eContainer.get('contents');
+      contents = eContainer.get<EList>('contents')!;
       fragment = contents.size() > 1 ? '/' + contents.indexOf(this) : '/';
     } else {
       eFeature = this.eContainingFeature;
       if (eFeature) {
         fragment = eContainer.fragment() + '/@' + eFeature.get('name');
         if (eFeature.get('upperBound') !== 1) {
-          fragment += '.' + eContainer.get(eFeature.get('name')).indexOf(this);
+          fragment +=
+            '.' +
+            (eContainer as EObject)
+              .get<EList>(eFeature.get('name'))!
+              .indexOf(this);
         }
       }
     }
@@ -413,7 +435,7 @@ export class EObject {
   }
 }
 
-function initValues(eObject: any) {
+function initValues(eObject: EObject) {
   const eClass = eObject.eClass;
   if (!eClass) return;
 
@@ -423,10 +445,10 @@ function initValues(eObject: any) {
   });
 }
 
-function initValue(eObject: any, eFeature: any) {
+function initValue(eObject: EObject, eFeature: EObject) {
   if (!eObject || !eFeature) return;
 
-  const featureName = eFeature.get('name'),
+  const featureName = eFeature.get<string>('name')!,
     defaultValue = eFeature.values.defaultValue,
     upperBound = eFeature.get('upperBound'),
     isDerived = eFeature.values.derived === true,
@@ -462,22 +484,27 @@ function initValue(eObject: any, eFeature: any) {
   }
 }
 
-function getEStructuralFeature(eClass: any, featureName: any) {
-  return eClass.get('eAllStructuralFeatures').find((feature: any) => {
+function getEStructuralFeature(eClass: EObject, featureName: string) {
+  return eClass.get<EList>('eAllStructuralFeatures')!.find((feature: any) => {
     return feature.values.name === featureName;
   });
 }
 
-function setValues(eObject: EObject, attributes: any) {
+function setValues(eObject: EObject, attributes: Record<any, any>) {
   if (!eObject.eClass) return;
 
-  const getOrCreate = (eType: any, value: any) => {
+  const getOrCreate = (eType: EObject, value: any) => {
     if (typeof value === 'function') return value;
     if (value instanceof EObject) return value;
     return create(eType, value);
   };
 
-  const createSingle = (key: any, value: any, isReference: any, eType: any) => {
+  const createSingle = (
+    key: string,
+    value: any,
+    isReference: boolean,
+    eType: EObject,
+  ) => {
     if (isReference) {
       eObject.set(key, getOrCreate(eType, value));
     } else {
@@ -485,13 +512,18 @@ function setValues(eObject: EObject, attributes: any) {
     }
   };
 
-  const createMany = (key: any, value: any, isReference: any, eType: any) => {
+  const createMany = (
+    key: string,
+    value: any,
+    isReference: boolean,
+    eType: EObject,
+  ) => {
     const values = Array.isArray(value) ? value : [value];
     values.forEach((current) => {
       if (isReference) {
-        eObject.get(key).add(getOrCreate(eType, current));
+        eObject.get<EList>(key)!.add(getOrCreate(eType, current));
       } else {
-        eObject.get(key).push(current);
+        eObject.get<EList>(key)!.push(current);
       }
     });
   };
@@ -519,11 +551,11 @@ function setValues(eObject: EObject, attributes: any) {
   });
 }
 
-export class EList {
+export class EList<T extends EObject = any> {
   private _internal: any[] = [];
   private readonly _owner: any;
   private _size = 0;
-  private _feature: any;
+  public _feature: any;
   private _isContainment = false;
 
   constructor(owner: any, feature?: any) {
@@ -531,6 +563,10 @@ export class EList {
     this._owner = owner;
     this._size = 0;
     this._setFeature(feature);
+  }
+
+  get length(): number {
+    return this._size;
   }
 
   _setFeature(feature: any) {
@@ -547,7 +583,7 @@ export class EList {
     }
   }
 
-  add(eObject: any) {
+  add(eObject: T | unknown) {
     if (!eObject || !(eObject instanceof EObject)) return this;
 
     if (this._isContainment) {
@@ -568,15 +604,21 @@ export class EList {
     return this;
   }
 
+  push(eObject: T | unknown): void {
+    this.add(eObject);
+  }
+
   addAll() {
-    ((arguments as unknown as any[]) || []).flat().forEach((value) => {
-      this.add(value);
-    });
+    Array.from(arguments || [])
+      .flat()
+      .forEach((value) => {
+        this.add(value);
+      });
 
     return this;
   }
 
-  remove(eObject: any) {
+  remove(eObject: T) {
     let eve = 'remove',
       eResource = this._owner.eResource();
 
@@ -601,46 +643,54 @@ export class EList {
     return this._size;
   }
 
-  at(position: any) {
+  at<T>(position: number): T | EObject {
     if (this._size < position) {
       throw new Error('Index Out Of Range');
     }
     return this._internal[position];
   }
 
-  array() {
+  array(): T[] {
     return this._internal;
   }
 
-  first() {
+  forEach(iterator: (e: T) => void): void {
+    this._internal.forEach(iterator);
+  }
+
+  first(): T | EObject | undefined {
     return this._internal[0];
   }
 
-  last() {
+  last(): T | undefined {
     return this._internal[this._internal.length - 1];
   }
 
-  each(iterator: any) {
+  each(iterator: (e: T) => void) {
     return this._internal.forEach(iterator);
   }
 
-  filter(iterator: any) {
+  filter(iterator: (e: T) => any) {
     return this._internal.filter(iterator);
   }
 
-  find(iterator: any) {
+  find(iterator: (e: T) => any) {
     return this._internal.find(iterator);
   }
 
-  map(iterator: any) {
+  map(iterator: (e: T) => any) {
     return this._internal.map(iterator);
   }
 
-  contains(object: any) {
+  contains(object: T | unknown) {
     return this._internal.includes(object);
   }
 
-  indexOf(object: any): number {
+  includes(object: T | unknown) {
+    return this.contains(object);
+  }
+
+  indexOf(object: T | unknown): number {
     return this._internal.indexOf(object);
   }
 }
@@ -676,8 +726,8 @@ EClass.values = {
 
   eAllSuperTypes() {
     if (!this._eAllSuperTypes) {
-      const compute = (eClass: any) => {
-        const superTypes = eClass.get('eSuperTypes').array(),
+      const compute = (eClass: EObject) => {
+        const superTypes = eClass.get<EList>('eSuperTypes')!.array(),
           eAllSuperTypes = superTypes
             .map((s: any) => s.get('eAllSuperTypes'))
             .flat();
@@ -686,10 +736,10 @@ EClass.values = {
       };
 
       this.on('add:eSuperTypes remove:eSuperTypes', () => {
-        this._eAllSuperTypes = compute(this);
+        this._eAllSuperTypes = compute(this as EObject);
       });
 
-      this._eAllSuperTypes = compute(this);
+      this._eAllSuperTypes = compute(this as EObject);
     }
 
     return this._eAllSuperTypes;
@@ -712,7 +762,7 @@ EClass.values = {
   eReferences() {
     let eFeatures, eReferences;
 
-    eFeatures = this.get('eStructuralFeatures');
+    eFeatures = this.get('eStructuralFeatures')!;
     eReferences = eFeatures.filter((f: any) => f.isTypeOf('EReference'));
 
     return eReferences;
@@ -720,7 +770,7 @@ EClass.values = {
   eAttributes() {
     let eFeatures, eAttributes;
 
-    eFeatures = this.get('eStructuralFeatures');
+    eFeatures = this.get('eStructuralFeatures')!;
     eAttributes = eFeatures.filter((f: any) => {
       return f.isTypeOf('EAttribute');
     });
@@ -737,9 +787,9 @@ EClass.values = {
     return Array.isArray(eID) ? eID[0] : null;
   },
   eAllStructuralFeatures() {
-    const compute = (eClass: any) => {
+    const compute = (eClass: EObject) => {
       let eSuperFeatures, eAllFeatures, eSuperTypes;
-      eSuperTypes = eClass.get('eAllSuperTypes');
+      eSuperTypes = eClass.get<EList>('eAllSuperTypes');
       eAllFeatures = eClass.values.eStructuralFeatures.array();
       eSuperFeatures = (eSuperTypes || [])
         .map((s: any) => s.values.eStructuralFeatures.array())
@@ -750,7 +800,7 @@ EClass.values = {
       );
     };
 
-    return compute(this);
+    return compute(this as EObject);
   },
   eAllAttributes() {
     const eAllFeatures = this.get('eAllStructuralFeatures'),
@@ -812,7 +862,7 @@ EClass_eOperations.values = {
   upperBound: -1,
   containment: true,
 };
-EClass.get('eStructuralFeatures')
+EClass.get<EList>('eStructuralFeatures')!
   .add(EClass_abstract)
   .add(EClass_interface)
   .add(EClass_eSuperTypes)
@@ -912,7 +962,7 @@ EClass_eIDAttribute.values = {
   _: EClass.values.eIDAttribute,
 };
 
-EClass.get('eStructuralFeatures')
+EClass.get<EList>('eStructuralFeatures')!
   .add(EClass_eAllStructuralFeatures)
   .add(EClass_eAllSuperTypes)
   .add(EClass_eAllSubTypes)
@@ -930,7 +980,7 @@ EClass.getEStructuralFeature = function (feature: any) {
 
   featureName = feature.eClass ? feature.get('name') : feature;
 
-  return this.get('eAllStructuralFeatures').find((f: any) => {
+  return this.get<EList>('eAllStructuralFeatures')!.find((f: any) => {
     return f.get('name') === featureName;
   });
 };
@@ -944,7 +994,7 @@ EClass_getEStructuralFeature.values = {
 };
 EClass_getEStructuralFeature._ = EClass.getEStructuralFeature;
 
-EClass.get('eOperations').add(EClass_getEStructuralFeature);
+EClass.get<EList>('eOperations')!.add(EClass_getEStructuralFeature);
 
 // Setting feature reference for ELists.
 EClass.values.eStructuralFeatures._setFeature(EClass_eStructuralFeatures);
@@ -1018,23 +1068,23 @@ EClass_getEStructuralFeature.eClass = EOperation;
 EClass_getEStructuralFeature.values.eType = EStructuralFeature;
 
 // Set Types Hierarchy.
-EModelElement.get('eSuperTypes').add(EObjectClass);
-EAnnotation.get('eSuperTypes').add(EModelElement);
-ENamedElement.get('eSuperTypes').add(EModelElement);
-EPackage.get('eSuperTypes').add(ENamedElement);
-EClassifier.get('eSuperTypes').add(ENamedElement);
-EClass.get('eSuperTypes').add(EClassifier);
-EDataType.get('eSuperTypes').add(EClassifier);
-EEnum.get('eSuperTypes').add(EDataType);
-EEnumLiteral.get('eSuperTypes').add(ENamedElement);
-ETypedElement.get('eSuperTypes').add(ENamedElement);
-EStructuralFeature.get('eSuperTypes').add(ETypedElement);
-EAttribute.get('eSuperTypes').add(EStructuralFeature);
-EReference.get('eSuperTypes').add(EStructuralFeature);
-EOperation.get('eSuperTypes').add(ETypedElement);
-EParameter.get('eSuperTypes').add(ETypedElement);
-ETypeParameter.get('eSuperTypes').add(ENamedElement);
-EGenericType.get('eSuperTypes').add(EObjectClass);
+EModelElement.get<EList>('eSuperTypes')!.add(EObjectClass);
+EAnnotation.get<EList>('eSuperTypes')!.add(EModelElement);
+ENamedElement.get<EList>('eSuperTypes')!.add(EModelElement);
+EPackage.get<EList>('eSuperTypes')!.add(ENamedElement);
+EClassifier.get<EList>('eSuperTypes')!.add(ENamedElement);
+EClass.get<EList>('eSuperTypes')!.add(EClassifier);
+EDataType.get<EList>('eSuperTypes')!.add(EClassifier);
+EEnum.get<EList>('eSuperTypes')!.add(EDataType);
+EEnumLiteral.get<EList>('eSuperTypes')!.add(ENamedElement);
+ETypedElement.get<EList>('eSuperTypes')!.add(ENamedElement);
+EStructuralFeature.get<EList>('eSuperTypes')!.add(ETypedElement);
+EAttribute.get<EList>('eSuperTypes')!.add(EStructuralFeature);
+EReference.get<EList>('eSuperTypes')!.add(EStructuralFeature);
+EOperation.get<EList>('eSuperTypes')!.add(ETypedElement);
+EParameter.get<EList>('eSuperTypes')!.add(ETypedElement);
+ETypeParameter.get<EList>('eSuperTypes')!.add(ENamedElement);
+EGenericType.get<EList>('eSuperTypes')!.add(EObjectClass);
 
 // ETypedElement
 //  - attributes:
@@ -1122,7 +1172,7 @@ ETypedElement_required.values = {
   },
 };
 
-ETypedElement.get('eStructuralFeatures')
+ETypedElement.get<EList>('eStructuralFeatures')!
   .add(ETypedElement_eType)
   .add(ETypedElement_ordered)
   .add(ETypedElement_unique)
@@ -1147,7 +1197,9 @@ EModelElement_eAnnotations.values = {
   containment: true,
 };
 
-EModelElement.get('eStructuralFeatures').add(EModelElement_eAnnotations);
+EModelElement.get<EList>('eStructuralFeatures')!.add(
+  EModelElement_eAnnotations,
+);
 
 const ENamedElement_name = new EObject();
 ENamedElement_name.eClass = EAttribute;
@@ -1158,7 +1210,7 @@ ENamedElement_name.values = {
   eType: EString,
 };
 
-ENamedElement.get('eStructuralFeatures').add(ENamedElement_name);
+ENamedElement.get<EList>('eStructuralFeatures')!.add(ENamedElement_name);
 
 const EStructuralFeature_changeable = EAttribute.create({
     name: 'changeable',
@@ -1190,7 +1242,7 @@ const EStructuralFeature_changeable = EAttribute.create({
     eType: EBoolean,
   })!;
 
-EStructuralFeature.get('eStructuralFeatures')
+EStructuralFeature.get<EList>('eStructuralFeatures')!
   .add(EStructuralFeature_changeable)
   .add(EStructuralFeature_volatile)
   .add(EStructuralFeature_transient)
@@ -1218,14 +1270,14 @@ const EReference_containment = EAttribute.create({
     eType: EReference,
   });
 
-EReference.get('eStructuralFeatures')
+EReference.get<EList>('eStructuralFeatures')!
   .add(EReference_containment)
   .add(EReference_container)
   .add(EReference_resolveProxies)
   .add(EReference_eOpposite);
 
 const EAttribute_iD = EAttribute.create({ name: 'iD', eType: EBoolean });
-EAttribute.get('eStructuralFeatures').add(EAttribute_iD);
+EAttribute.get<EList>('eStructuralFeatures')!.add(EAttribute_iD);
 
 // Set attributes values for EClasses.
 
@@ -1255,7 +1307,7 @@ const EOperation_eParameters = EReference.create({
   upperBound: -1,
 });
 
-EOperation.get('eStructuralFeatures').add(EOperation_eParameters);
+EOperation.get<EList>('eStructuralFeatures')!.add(EOperation_eParameters);
 
 const EEnum_eLiterals = EReference.create({
   name: 'eLiterals',
@@ -1265,9 +1317,9 @@ const EEnum_eLiterals = EReference.create({
   upperBound: -1,
 });
 
-EEnum.get('eStructuralFeatures').add(EEnum_eLiterals);
+EEnum.get<EList>('eStructuralFeatures')!.add(EEnum_eLiterals);
 
-EEnumLiteral.get('eStructuralFeatures')
+EEnumLiteral.get<EList>('eStructuralFeatures')!
   .add(EAttribute.create({ name: 'literal', eType: EString }))
   .add(EAttribute.create({ name: 'value', eType: EInt }));
 
@@ -1294,7 +1346,7 @@ export const EStringToStringMapEntry_value = EAttribute.create({
   eType: EString,
 })!;
 
-EStringToStringMapEntry.get('eStructuralFeatures')
+EStringToStringMapEntry.get<EList>('eStructuralFeatures')!
   .add(EStringToStringMapEntry_key)
   .add(EStringToStringMapEntry_value);
 
@@ -1318,7 +1370,7 @@ const EAnnotation_details = EReference.create({
   eType: EStringToStringMapEntry,
 })!;
 
-EAnnotation.get('eStructuralFeatures')
+EAnnotation.get<EList>('eStructuralFeatures')!
   .add(EAnnotation_source)
   .add(EAnnotation_details);
 
@@ -1357,7 +1409,7 @@ const EGenericType_eClassifier = EReference.create({
   eType: EClassifier,
 })!;
 
-EGenericType.get('eStructuralFeatures')
+EGenericType.get<EList>('eStructuralFeatures')!
   .add(EGenericType_eTypeParameter)
   .add(EGenericType_eUpperBound)
   .add(EGenericType_eLowerBound)
@@ -1371,7 +1423,9 @@ const ETypedElement_eGenericType = EReference.create({
   eType: EGenericType,
 })!;
 
-ETypedElement.get('eStructuralFeatures').add(ETypedElement_eGenericType);
+ETypedElement.get<EList>('eStructuralFeatures')!.add(
+  ETypedElement_eGenericType,
+);
 
 const EClass_eGenericTypes = EReference.create({
   name: 'eGenericSuperTypes',
@@ -1380,7 +1434,7 @@ const EClass_eGenericTypes = EReference.create({
   eType: EGenericType,
 })!;
 
-EClass.get('eStructuralFeatures').add(EClass_eGenericTypes);
+EClass.get<EList>('eStructuralFeatures')!.add(EClass_eGenericTypes);
 
 const EOperation_eGenericExceptions = EReference.create({
   name: 'eGenericExceptions',
@@ -1389,7 +1443,9 @@ const EOperation_eGenericExceptions = EReference.create({
   eType: EGenericType,
 })!;
 
-EOperation.get('eStructuralFeatures').add(EOperation_eGenericExceptions);
+EOperation.get<EList>('eStructuralFeatures')!.add(
+  EOperation_eGenericExceptions,
+);
 
 // ETypeParameter
 //
@@ -1408,7 +1464,7 @@ const ETypeParameter_eGenericTypes = EReference.create({
   eType: EGenericType,
 })!;
 
-ETypeParameter.get('eStructuralFeatures')
+ETypeParameter.get<EList>('eStructuralFeatures')!
   .add(ETypeParameter_eBounds)
   .add(ETypeParameter_eGenericTypes);
 
@@ -1419,7 +1475,7 @@ const EClassifier_eTypeParameters = EReference.create({
   eType: ETypeParameter,
 })!;
 
-EClassifier.get('eStructuralFeatures').add(EClassifier_eTypeParameters);
+EClassifier.get<EList>('eStructuralFeatures')!.add(EClassifier_eTypeParameters);
 
 const EOperation_eTypeParameters = EReference.create({
   name: 'eTypeParameters',
@@ -1428,7 +1484,7 @@ const EOperation_eTypeParameters = EReference.create({
   eType: ETypeParameter,
 })!;
 
-EOperation.get('eStructuralFeatures').add(EOperation_eTypeParameters);
+EOperation.get<EList>('eStructuralFeatures')!.add(EOperation_eTypeParameters);
 
 // Setting core datatypes values
 
@@ -1486,7 +1542,7 @@ const EPackage_eSubPackages = EReference.create({
   eType: EPackage,
 })!;
 
-EPackage.get('eStructuralFeatures')
+EPackage.get<EList>('eStructuralFeatures')!
   .add(EAttribute.create({ name: 'nsURI', eType: EString }))
   .add(EAttribute.create({ name: 'nsPrefix', eType: EString }))
   .add(EPackage_eClassifiers)
@@ -1500,7 +1556,7 @@ export const EcorePackage = EPackage.create({
   nsURI: 'http://www.eclipse.org/emf/2002/Ecore',
 })!;
 
-EcorePackage.get('eClassifiers')
+EcorePackage.get<EList>('eClassifiers')!
   .add(EObjectClass)
   .add(EModelElement)
   .add(EAnnotation)
@@ -1540,33 +1596,41 @@ EcorePackage.get('eClassifiers')
 //
 // Stores all created EPackages
 
+export interface ERegistry {
+  _ePackages: Record<any, any>;
+  getEPackage: (nsURI: string) => any;
+  register: (ePackage: typeof EPackage) => void;
+  ePackages: () => any[];
+  elements: (type: EObject | unknown) => any[];
+}
+
 EPackage.Registry = {
   _ePackages: {},
 
-  getEPackage(nsURI: any) {
+  getEPackage(nsURI: string) {
     return this._ePackages[nsURI];
   },
 
-  register(ePackage: any) {
+  register(ePackage: typeof EPackage) {
     if (!ePackage.isSet('nsURI')) {
       throw new Error('Cannot register EPackage without nsURI');
     }
 
-    ePackage.get('eSubPackages').each((ePackage: any) => {
+    ePackage.get<EList>('eSubPackages')!.each((ePackage: any) => {
       this.register(ePackage);
     });
 
-    this._ePackages[ePackage.get('nsURI')] = ePackage;
+    this._ePackages[ePackage.get<string>('nsURI')!] = ePackage;
   },
 
   ePackages() {
     return Object.values(this._ePackages);
   },
 
-  elements(type: any) {
+  elements(type: EObject | unknown) {
     const filter = (el: any) => {
       if (!type) return true;
-      else if (type.eClass) {
+      else if ((type as EObject).eClass) {
         return el.eClass === type;
       } else {
         return el.eClass.get('name') === type;
@@ -1574,12 +1638,12 @@ EPackage.Registry = {
     };
 
     const ePackages = this.ePackages();
-    const content = (eObject: any) => {
+    const content = (eObject: EObject) => {
       return eObject.eContents().map((c: any) => {
         return [c, content(c)];
       });
     };
-    const map = (p: any) => content(p);
+    const map = (p: typeof EPackage) => content(p);
     let contents = [ePackages, ePackages.map(map)];
     contents = contents.flat(Infinity);
     contents = contents.filter(filter);

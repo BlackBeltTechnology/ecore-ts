@@ -2,21 +2,21 @@ import fs from 'node:fs';
 import { it, describe, expect } from 'vitest';
 import { ResourceSet } from '../src/resource';
 import { XMI } from '../src/xmi';
-import { EPackage } from '../src/ecore';
+import { EList, EPackage } from '../src/ecore';
 
 describe('XMI Instances of complex model (test5.xmi)', () => {
   //Read and parse the model file
-  let modelSet = ResourceSet!.create()!;
+  let modelSet = ResourceSet.create()!;
   let model = modelSet.create({ uri: 'test5.xmi' })!;
   let modelFile = fs.readFileSync('./test/models/test5.xmi', 'utf8');
   (model as unknown as any).parse(modelFile, XMI);
-  let firstElement = model.get('contents').first();
+  let firstElement = model.get<EList>('contents')!.first();
   EPackage.Registry.register(firstElement);
 
   // Begin testing of instances
 
   it('should parse reflexive relations (instance 1)', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-instance1.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-instance1.xmi',
@@ -28,7 +28,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse nested instance data (instance 2)', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-instance2.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-instance2.xmi',
@@ -65,7 +65,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse references (instances-3)', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
 
     let instance3a = instanceSet.create({ uri: 'test5-instance3a.xmi' })!;
     let instance3b = instanceSet.create({ uri: 'test5-instance3b.xmi' })!;
@@ -85,7 +85,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse attributes which are XMI elements (instance-5b)', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-instance5b.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-instance5b.xmi',
@@ -98,14 +98,14 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse an XMI file with multiple instances and namespaces', () => {
-    let newmodelSet = ResourceSet!.create()!;
+    let newmodelSet = ResourceSet.create()!;
     let newmodel = newmodelSet.create({ uri: 'test1.xmi' })!;
     let newmodelFile = fs.readFileSync('./test/models/test1.xmi', 'utf8');
     (newmodel as unknown as any).parse(newmodelFile, XMI);
-    let newfirstElement = newmodel.get('contents').first();
+    let newfirstElement = newmodel.get<EList>('contents')!.first();
     EPackage.Registry.register(newfirstElement);
 
-    let multiInstanceSet = ResourceSet!.create()!;
+    let multiInstanceSet = ResourceSet.create()!;
     let multiInstance = multiInstanceSet.create({
       uri: 'test5-multipleinstances.xmi',
     })!;
@@ -121,7 +121,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should escape invalid characters in attributes when printing', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-instance6.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-instance6.xmi',
@@ -133,7 +133,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse instances with xmi:id', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance = instanceSet.create({ uri: 'test5-idtest1.xmi' })!;
     let instanceFile = fs.readFileSync(
       './test/models/test5-idtest1.xmi',
@@ -145,7 +145,7 @@ describe('XMI Instances of complex model (test5.xmi)', () => {
   });
 
   it('should parse references via xmi:id and href', () => {
-    let instanceSet = ResourceSet!.create()!;
+    let instanceSet = ResourceSet.create()!;
     let instance1 = instanceSet.create({ uri: 'test5-idtest1.xmi' })!;
     let instance1File = fs.readFileSync(
       './test/models/test5-idtest1.xmi',

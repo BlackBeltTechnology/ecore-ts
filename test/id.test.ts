@@ -1,8 +1,9 @@
 import { expect, it, describe } from 'vitest';
 import { ResourceSet } from '../src/resource';
+import { EList, EObject } from '../src/ecore';
 
 describe('ids', () => {
-  let rs = ResourceSet!.create()!;
+  let rs = ResourceSet.create()!;
   let r = rs.create('id-test')!;
 
   let data = {
@@ -30,13 +31,13 @@ describe('ids', () => {
 
   (r as unknown as any).parse(data);
 
-  expect(r.get('contents').size()).toBe(1);
+  expect(r.get<EList>('contents')!.size()).toBe(1);
 
-  let root = r.get('contents').at(0);
-  expect(root.get('eClassifiers').size()).toBe(2);
+  let root = r.get<EList>('contents')!.at<EObject>(0);
+  expect(root.get<EList>('eClassifiers')!.size()).toBe(2);
 
-  let a = root.get('eClassifiers').at(0);
-  let b = root.get('eClassifiers').at(1);
+  let a = root.get<EList>('eClassifiers')!.at<EObject>(0);
+  let b = root.get<EList>('eClassifiers')!.at<EObject>(1);
 
   expect(a.get('name')).toBe('A');
   expect(b.get('name')).toBe('B');
@@ -85,8 +86,8 @@ describe('ids', () => {
   });
 
   it('should be used to resolve references', () => {
-    expect(b.get('eSuperTypes').size()).toBe(1);
-    expect(b.get('eSuperTypes').at(0)).toBe(a);
+    expect(b.get<EList>('eSuperTypes')!.size()).toBe(1);
+    expect(b.get<EList>('eSuperTypes')!.at(0)).toBe(a);
   });
 
   it('should serialize id', () => {
