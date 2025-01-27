@@ -1,0 +1,66 @@
+name: Release Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The new version to release (e.g., 1.0.1)"
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js and pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Update version
+        run: |
+          pnpm version ${GITHUB_EVENT_INPUTS_VERSION} --no-git-tag-version
+          echo "Updated version to ${GITHUB_EVENT_INPUTS_VERSION}"
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build the package
+        run: pnpm run build
+
+      - name: Run tests
+        run: pnpm run test
+
+      - name: Authenticate with NPM
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Publish to NPM
+        run: pnpm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit and push version bump
+        run: |
+          git config --global user.name "oss"
+          git config --global user.email "oss@blackbelt.hu"
+          git add package.json pnpm-lock.yaml
+          git commit -m "Release version ${GITHUB_EVENT_INPUTS_VERSION}"
+          git push
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+
+      - name: Create and push version tag
+        run: |
+          git tag v${GITHUB_EVENT_INPUTS_VERSION}
+          git push origin v${GITHUB_EVENT_INPUTS_VERSION}
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
