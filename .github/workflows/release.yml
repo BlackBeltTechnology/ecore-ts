@@ -21,7 +21,17 @@ jobs:
         node-version: [20.x]
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: master
+
+      - name: Ensure the master branch is up-to-date
+        run: |
+          git fetch origin master
+          git checkout master
+          git reset --hard origin/master
+
 
       - name: setup git config
         run: |
