@@ -211,24 +211,27 @@ If you want to contribute to this project or simply build from the source, you f
 > git clone https://github.com/ghillairet/ecore.js.git
 ```
 
-To build the project or run the tests you first need to install [Node](http://nodejs.org/), [npm](https://www.npmjs.org/) (distributed with Node) and [Grunt](http://gruntjs.com).
+To build the project or run the tests you first need to install [Node](http://nodejs.org/), [npm](https://www.npmjs.org/) (distributed with Node).
 
-Once these are installed, go back to your terminal and enter the ecore.js directory.
+We recommend using [NVM](https://github.com/nvm-sh/nvm), with it, you can easily manage your NodeJS
+versions similarly to virtualenvs.
+
+If you are using NVM, all you need to do is to run the following in the repository root:
+
+```bash
+nvm install
+```
+
+The tests are written using the [Vitest](https://vitest.dev/) library. To run them, execute the following command:
 
 ```
-> cd ecore.js
-```
-
-The tests are written using the [mocha](http://mochajs.org/) library. To run them, execute the following command:
-
-```
-> grunt test
+> npm test
 ```
 
 Running a build will create a new distribution in the folder dist. This is done by executing the command:
 
 ```
-> grunt build
+> npm run build
 ```
 
 That's it, you are now ready to contribute to the project.

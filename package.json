@@ -2,6 +2,9 @@
   "name": "ecore",
   "description": "Ecore (EMOF) JavaScript Implementation",
   "version": "0.12.0",
+  "type": "module",
+  "module": "dist/ecore.js",
+  "types": "dist/main.d.ts",
   "author": "Guillaume Hillairet <g.hillairet@gmail.com>",
   "repository": {
     "type": "git",
@@ -12,29 +15,32 @@
     "emof",
     "model"
   ],
-  "main": "index.js",
   "engines": {
-    "node": ">= 0.8.0"
+    "node": ">= 20.0.0"
   },
   "dependencies": {
-    "sax": "^1.2.1",
-    "underscore": "^1.8.3"
+    "lodash-es": "^4.17.21",
+    "sax": "^1.4.1"
   },
   "devDependencies": {
-    "grunt": "~1.0.1",
-    "grunt-contrib-concat": "^1.0.1",
-    "grunt-contrib-jshint": "^1.0.0",
-    "grunt-contrib-uglify": "^2.0.0",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-mocha-test": "^0.12.7",
-    "mocha": "^2.5.3"
-  },
-  "directories": {
-    "doc": "docs",
-    "test": "test"
+    "@biomejs/biome": "^1.9.4",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.10.5",
+    "@types/sax": "^1.2.7",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.7",
+    "vite-plugin-dts": "^4.5.0",
+    "vitest": "^2.1.8"
   },
   "scripts": {
-    "test": "mocha"
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:dev": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "format": "biome format ./src --write && biome format ./test --write",
+    "lint": "biome check --write ./src"
   },
   "license": "EPL"
 }
