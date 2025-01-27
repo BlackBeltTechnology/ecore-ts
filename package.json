@@ -3,6 +3,7 @@
   "description": "Ecore (EMOF) TypeScript Implementation",
   "version": "0.17.5",
   "type": "module",
+  "main": "dist/ecore-ts.js",
   "module": "dist/ecore-ts.js",
   "types": "dist/main.d.ts",
   "author": "Norbert Herczeg <norbert.herczeg@blackbelt.hu>",
