@@ -21,7 +21,7 @@ The original license can be found in [archive/LICENSE](./archive/LICENSE).
 
 ### Browser
 
-Download Ecore.ts from dist/ folder, and include it in your html along with underscore.js.
+Using the library as-is via CDN:
 
 ```html
 <script type="module">
@@ -41,9 +41,9 @@ Download Ecore.ts from dist/ folder, and include it in your html along with unde
 </script>
 ```
 
-### Node
+### Node / NPM
 
-Ecore.ts is available on npm and can be use as a Node module. To install it simply use the following command from your terminal:
+Ecore.ts is available on NPM and can be use as a Node module. To install it simply use the following command from your terminal:
 
 ```
 npm install ecore-ts
