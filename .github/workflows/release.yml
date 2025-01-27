@@ -57,22 +57,24 @@ jobs:
       - name: Authenticate with NPM
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
+      - name: Commit version bump
+        run: |
+          git add package.json pnpm-lock.yaml
+          git commit -m "Release version ${GITHUB_EVENT_INPUTS_VERSION}"
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+
+      - name: Create version tag
+        run: |
+          git tag v${GITHUB_EVENT_INPUTS_VERSION}
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+
       - name: Publish to NPM
         run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Commit and push version bump
+      - name: Push version and tag
         run: |
-          git add package.json pnpm-lock.yaml
-          git commit -m "Release version ${GITHUB_EVENT_INPUTS_VERSION}"
-          git push
-        env:
-          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
-
-      - name: Create and push version tag
-        run: |
-          git tag v${GITHUB_EVENT_INPUTS_VERSION}
-          git push origin v${GITHUB_EVENT_INPUTS_VERSION}
-        env:
-          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+          git push origin HEAD v${GITHUB_EVENT_INPUTS_VERSION}
