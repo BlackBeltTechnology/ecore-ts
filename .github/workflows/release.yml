@@ -8,6 +8,10 @@ on:
         required: true
         type: string
 
+
+env:
+  GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -42,8 +46,6 @@ jobs:
         run: |
           pnpm version ${GITHUB_EVENT_INPUTS_VERSION} --no-git-tag-version
           echo "Updated version to ${GITHUB_EVENT_INPUTS_VERSION}"
-        env:
-          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         run: pnpm install
@@ -61,14 +63,10 @@ jobs:
         run: |
           git add package.json pnpm-lock.yaml
           git commit -m "Release version ${GITHUB_EVENT_INPUTS_VERSION}"
-        env:
-          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
 
       - name: Create version tag
         run: |
           git tag v${GITHUB_EVENT_INPUTS_VERSION}
-        env:
-          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
 
       - name: Publish to NPM
         run: pnpm publish --access public
