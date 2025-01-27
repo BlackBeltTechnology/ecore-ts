@@ -25,7 +25,7 @@ Using the library as-is via CDN:
 
 ```html
 <script type="module">
-  import { EPackage, ResourceSet, EClass, EAttribute, EString } from 'https://unpkg.com/ecore-ts@latest/dist/ecore-ts.js';
+  import { EPackage, ResourceSet, EClass, EAttribute, EString } from 'https://unpkg.com/ecore-ts';
 
   const rs = ResourceSet.create();
   const hello = rs.create({ uri: 'hello' });
