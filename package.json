@@ -1,19 +1,27 @@
 {
-  "name": "ecore",
-  "description": "Ecore (EMOF) JavaScript Implementation",
+  "name": "ecore-ts",
+  "description": "Ecore (EMOF) TypeScript Implementation",
   "version": "0.12.0",
   "type": "module",
-  "module": "dist/ecore.js",
+  "module": "dist/ecore-ts.js",
   "types": "dist/main.d.ts",
-  "author": "Guillaume Hillairet <g.hillairet@gmail.com>",
+  "author": "Norbert Herczeg <norbert.herczeg@blackbelt.hu>",
+  "contributors": [
+    {
+      "name": "Guillaume Hillairet",
+      "email": "g.hillairet@gmail.com"
+    }
+  ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/ghillairet/ecore.js.git"
+    "url": "git://github.com/BlackBeltTechnology/ecore-ts.git"
   },
   "keywords": [
     "emf",
     "emof",
-    "model"
+    "ecore",
+    "model",
+    "TypeScript"
   ],
   "engines": {
     "node": ">= 20.0.0"
@@ -42,5 +50,5 @@
     "format": "biome format ./src --write && biome format ./test --write",
     "lint": "biome check --write ./src"
   },
-  "license": "EPL"
+  "license": "EPL-2.0"
 }

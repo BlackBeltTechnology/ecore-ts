@@ -1,45 +1,52 @@
-[Ecore](http://www.eclipse.org/modeling/emf/?project=emf) ([EMOF](http://en.wikipedia.org/wiki/Meta-Object_Facility)) implementation in JavaScript.
+[Ecore](https://wiki.eclipse.org/Ecore/) ([EMF](https://wiki.eclipse.org/EMF/)) implementation in TypeScript.
 
 ## Content
 
-* [Install](#installl)
+* [Background](#background)
+* [Install](#install)
 * [Usage](#usage)
-* [API](#api)
 * [Contributing](#contributing)
-* [History](https://github.com/ghillairet/ecore.js/releases/)
+* [History](https://github.com/BlackBeltTechnology/ecore-ts/releases)
 * [License](#license)
 
+## Background
+
+This is a fork of [ecore.js](https://github.com/emfjson/ecore.js). As per discussed in [pull/47](https://github.com/emfjson/ecore.js/pull/47),
+the original repository is no longer maintained and [BlackBeltTechnology](https://github.com/BlackBeltTechnology) will continue
+the maintenance and implementation of potential new features here.
+
+The original license can be found in [archive/LICENSE](./archive/LICENSE).
 
 ## Install
 
 ### Browser
 
-Download Ecore.js from dist/ folder, and include it in your html along with underscore.js.
+Download Ecore.ts from dist/ folder, and include it in your html along with underscore.js.
 
 ```html
-<script src="underscore.js"></script>
-<script src="ecore.js"></script>
-```
+<script type="module">
+  import { EPackage, ResourceSet, EClass, EAttribute, EString } from 'https://unpkg.com/ecore-ts@latest/dist/ecore-ts.js';
 
-Alternatively you can use the dependency manager [Bower](http://bower.io/) to install Ecore.js in your project.
+  const rs = ResourceSet.create();
+  const hello = rs.create({ uri: 'hello' });
+  const helloPackage = EPackage.create({ name: 'hello', nsPrefix: 'hello' , nsURI: 'https://ecore-ts.com/hello'});
+  const helloClass = EClass.create({ name: 'Hello' });
+  const worldAttribute = EAttribute.create({ name: 'world', eType: EString });
 
-```
-bower install ecore
+  helloClass.get('eStructuralFeatures').add(worldAttribute);
+  helloPackage.get('eClassifiers').add(helloClass);
+  hello.get('contents').add(helloPackage);
+
+  console.log(hello.to(JSON));
+</script>
 ```
 
 ### Node
 
-Ecore.js is available on npm and can be use as a Node module. To install it simply use the following command from your terminal:
+Ecore.ts is available on npm and can be use as a Node module. To install it simply use the following command from your terminal:
 
 ```
-npm install ecore
-```
-
-Importing Ecore.js in a Node module is done as follow:
-
-
-```javascript
-var Ecore = require('ecore');
+npm install ecore-ts
 ```
 
 ## Usage
@@ -47,46 +54,47 @@ var Ecore = require('ecore');
 ### Create a model
 
 ```javascript
+import { EPackage, ResourceSet, EClass, EReference, EAttribute, EString } from 'ecore-ts';
 
 // Resources contain model elements and are identified by a URI.
 
-var resourceSet = Ecore.ResourceSet.create();
-var resource = resourceSet.create({ uri: '/model.json' });
+const resourceSet = ResourceSet.create();
+const resource = resourceSet.create({ uri: '/model.json' });
 
 // EClass are used to define domain elements, they are identified
 // by name and a set of structural features (attributes and references).
 
-var User = Ecore.EClass.create({
+const User = EClass.create({
     name: 'User',
     eStructuralFeatures: [
         // EAttributes are used to define domain elements
         // elements properties.
-        Ecore.EAttribute.create({
+        EAttribute.create({
             name: 'name',
             upperBound: 1,
-            eType: Ecore.EString
+            eType: EString
         }),
         // EReference are used to define links between domain
         // elements.
-        Ecore.EReference.create({
+        EReference.create({
             name: 'friends',
             upperBound: -1,
             containment: false,
-            eType: function() { return User; }
-        })
-    ]
+            eType: () => User,
+        }),
+    ],
 });
 
 // EPackages represent namespaces for a set of EClasses.
 // It's properties name, nsURI and nsPrefix must be set.
 
-var SamplePackage = Ecore.EPackage.create({
+const SamplePackage = EPackage.create({
     name: 'sample',
-    nsURI: 'http://www.example.org/sample',
+    nsURI: 'https://www.example.org/sample',
     nsPrefix: 'sample',
     eClassifiers: [
-        User
-    ]
+        User,
+    ],
 });
 
 // Packages must be added directly to the model's Resource.
@@ -98,15 +106,17 @@ resource.add(SamplePackage);
 Model Elements can also be created separately.
 
 ```javascript
-var User = Ecore.EClass.create({ name: 'User' });
-var User_name = Ecore.EAttribute.create({
+import { EClass, EAttribute, EReference, EString } from 'ecore-ts';
+
+const User = EClass.create({ name: 'User' });
+const User_name = EAttribute.create({
    name: 'name',
-   eType: Ecore.EString
+   eType: EString,
 });
-var User_friends = Ecore.EReference.create({
+const User_friends = EReference.create({
    name: 'friends',
    upperBound: -1,
-   eType: User
+   eType: User,
 });
 User.get('eStructuralFeatures').add(User_name);
 User.get('eStructuralFeatures').add(User_friends);
@@ -115,19 +125,19 @@ User.get('eStructuralFeatures').add(User_friends);
 ### Create instances
 
 ```javascript
-var u1 = User.create({ name: 'u1' });
-var u2 = User.create({ name: 'u2' });
+const u1 = User.create({ name: 'u1' });
+const u2 = User.create({ name: 'u2' });
 u1.get('friends').add(u2);
 
-u1.get('friends').each(function(friend) { console.log(friend) });
+u1.get('friends').each((friend) => { console.log(friend) });
 ```
 
 ### JSON Support
 
-JSON is the default serialization format supported by ecore.js. The JSON format is
+JSON is the default serialization format supported by ecore.ts. The JSON format is
 described [here](https://github.com/ghillairet/emfjson) and looks like this:
 
-```javascript
+```json
 {
     "eClass" : "/model.json#//User",
     "name" : "u1",
@@ -140,75 +150,26 @@ described [here](https://github.com/ghillairet/emfjson) and looks like this:
 
 ### XMI Support
 
-Support for XMI has been added in version 0.3.0. This support requires [sax.js](https://github.com/isaacs/sax-js).
+Support for XMI has been added in version 0.3.0.
 
 ```javascript
-var Ecore = require('ecore/dist/ecore.xmi');
+import { ResourceSet, XMI } from 'ecore-ts';
 
-var resourceSet = Ecore.ResourceSet.create();
+var resourceSet = ResourceSet.create();
 var resource = resourceSet.create({ uri: 'test2.xmi' });
 
-resource.parse(data, Ecore.XMI); // data being a string containing the XMI.
+resource.parse(data, XMI); // data being a string containing the XMI.
 
-resource.to(Ecore.XMI, true); // returns the XMI string
+resource.to(XMI, true); // returns the XMI string
 
 ```
-
-## API
-
-### Ecore
- - create(eClass): EObject
-
-### ResourceSet
- - create(): Resource
- - getEObject(uri): EObject
-
-### Resource
- - add(value)
- - addAll(values)
- - clear()
- - each(iterator, [context])
- - save([sucess], [error])
- - load([sucess], [error], [data])
- - toJSON(): Object
- - getEObject(fragment): EObject
-
-### EObject
- - has(property): Boolean
- - isSet(property): Boolean
- - set(property, value)
- - get(property): EObject or EList
- - isTypeOf(type): Boolean
- - isKindOf(type): Boolean
- - eResource(): Resource
- - eURI(): String
- - getEStructuralFeature(name)
-
-### EList
- - add(element)
- - addAll(elements)
- - remove(element)
- - size()
- - at(position)
- - first()
- - last()
- - rest(index)
- - each(iterator, [context])
- - filter(iterator, [context])
- - find(iterator, [context])
- - map(iterator, [context])
- - reject(iterator, [context])
- - contains(iterator, [context])
- - indexOf(iterator, [context])
-
 
 ## Contributing
 
 If you want to contribute to this project or simply build from the source, you first need to clone the project by executing the following command in your terminal.
 
-
 ```
-> git clone https://github.com/ghillairet/ecore.js.git
+> git clone git@github.com:BlackBeltTechnology/ecore-ts.git
 ```
 
 To build the project or run the tests you first need to install [Node](http://nodejs.org/), [npm](https://www.npmjs.org/) (distributed with Node).
@@ -237,6 +198,5 @@ Running a build will create a new distribution in the folder dist. This is done 
 That's it, you are now ready to contribute to the project.
 
 ## License
-This software is distributed under the terms of the Eclipse Public License 1.0 - http://www.eclipse.org/legal/epl-v10.html.
 
-
+Eclipse Public License - v 2.0
