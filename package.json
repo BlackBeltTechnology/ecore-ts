@@ -6,6 +6,7 @@
   "main": "dist/ecore-ts.js",
   "module": "dist/ecore-ts.js",
   "types": "dist/main.d.ts",
+  "unpkg": "dist/ecore-ts.js",
   "author": "Norbert Herczeg <norbert.herczeg@blackbelt.hu>",
   "contributors": [
     {
