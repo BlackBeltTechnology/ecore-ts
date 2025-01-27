@@ -23,6 +23,11 @@
     "model",
     "TypeScript"
   ],
+  "files": [
+    "dist",
+    "examples",
+    "archive"
+  ],
   "engines": {
     "node": ">= 20.0.0"
   },
